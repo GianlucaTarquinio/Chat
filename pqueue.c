@@ -39,7 +39,6 @@ PQueue* initQueue(int size, int (*compare)(const void*, const void*)) {
 		return NULL;
 	}
 	q->head = q->base;
-	q->tail = q->base;
 	pthread_mutex_init(&(q->lock), NULL);
 	return q;
 }
@@ -71,10 +70,25 @@ void** nextSpace(PQueue* q, void** space) {
 * @return A non-negative integer that is the number of spaces remaining in the queue,
 *         or -1 if the queue was full so the push did not happen.
 */
-int push(PQueue* q, const void* node) { //TODO
+int push(PQueue* q, void* node) {
 	pthread_mutex_lock(&(q->lock));
+	if(q->size >= q->maxSize) {
+		q->size = q->maxSize;
+		pthread_mutex_unlock(&(q->lock));
+		return -1;
+	}
+	void **current = q->head;
+	void **next = nextSpace(q, q->head);
+	int i = 0;
+	while(next != NULL && i < q->size && (q->compare)(node, *next) <= 0) {
+		current = next;
+		next = nextSpace(q, current);
+		i++;
+	}
+	*current = node;
+	q->size++;
 	pthread_mutex_unlock(&(q->lock));
-	return -1;
+	return q->maxSize - q->size;
 }
 
 /** Pop an element off of a priority queue
@@ -88,7 +102,6 @@ void* pop(PQueue* q) {
 	pthread_mutex_lock(&(q->lock));
 	if(q->size <= 0) {
 		q->size = 0;
-		q->head = q->tail;
 		errno = 0;
 		pthread_mutex_unlock(&(q->lock));
 		return NULL;
@@ -101,7 +114,7 @@ void* pop(PQueue* q) {
 		return NULL;
 	}
 	q->head = next;
-	q->size -= 1;
+	q->size--;
 	pthread_mutex_unlock(&(q->lock));
 	return popped;
 }

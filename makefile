@@ -16,5 +16,5 @@ queue.o: queue.c pqueue.h
 	gcc -c pqueue.c
 	
 clean:
-	rm *.o server client
+	rm -rf *.o server client
 	
