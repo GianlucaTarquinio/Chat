@@ -4,11 +4,16 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <poll.h>
+#include <sys/time.h>
 
 #include "pqueue.h"
 
 #define MSG_LEN 9000
 #define MAX_CONNECTIONS 80
+
+typedef struct message {
+	struct timeval time;
+} Message;
 
 typedef struct connectionData {
 	pthread_mutex_t lock;
@@ -19,6 +24,22 @@ typedef struct connectionData {
 } ConnectionData;
 
 ConnectionData connections[MAX_CONNECTIONS];
+
+int messageCompare(void *a, void *b) {
+	Message *m1 = (Message *) a;
+	Message *m2 - (Message *) b;
+	if(m1->date.tv_sec < m2->date.tv_usec) {
+		return 1;
+	} else if(m1->date.tv_sec > m2->date.tv_sec) {
+		return -1;
+	}
+	if(m1->date.tv_usec < m2->date.tv_usec) {
+		return 1;
+	} else if(m1->date.tv_usec > m2->date.tv_usec) {
+		return -1;
+	}
+	return 0;
+}
 
 /** Handle a connection with a client
 *
