@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
@@ -12,7 +13,9 @@
 #define MAX_CONNECTIONS 80
 
 typedef struct message {
+	char content[MSG_LEN + 1];
 	struct timeval date;
+	int senderNum;
 } Message;
 
 typedef struct connectionData {
@@ -24,6 +27,8 @@ typedef struct connectionData {
 } ConnectionData;
 
 ConnectionData connections[MAX_CONNECTIONS];
+PQueue *messages;
+pthread_mutex_t queueLock;
 
 int messageCompare(const void *a, const void *b) {
 	Message *m1 = (Message *) a;
@@ -39,6 +44,17 @@ int messageCompare(const void *a, const void *b) {
 		return -1;
 	}
 	return 0;
+}
+
+int addMessage(char *buf, int sender) {
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	Message *m = (Message *) malloc(sizeof(Message));
+	m->senderNum = sender;
+	strncpy(m->content, buf, MSG_LEN);
+	*(m->content + MSG_LEN) = '\0';
+	m->date = t;
+	return pqPush(&messages, m, messageCompare, &queueLock);
 }
 
 /** Handle a connection with a client
@@ -71,8 +87,11 @@ void *handleConnection(void *param) {
 				if(recv(me->connection, readBuff, MSG_LEN, 0) < 0) {
 					printf("recv failed\n");
 				} else {
-					strncpy(writeBuff, readBuff, MSG_LEN);
-					send(me->connection, writeBuff, strnlen(writeBuff, MSG_LEN + 1) + 1, 0);
+					if(!addMessage(readBuff, me->i)) {
+						printf("To send: %s\n", readBuff);
+					}
+					//strncpy(writeBuff, readBuff, MSG_LEN);
+					//send(me->connection, writeBuff, strnlen(writeBuff, MSG_LEN + 1) + 1, 0);
 				}
 			}
 		}
@@ -83,6 +102,10 @@ void *handleConnection(void *param) {
 */
 int main() {
 	//init connection data
+	if(pthread_mutex_init(&(queueLock), NULL)) {
+		printf("Initialization failed\n");
+		return 1;
+	}
 	int i;
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
 		connections[i].valid = 0;
