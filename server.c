@@ -44,6 +44,26 @@ int messageCompare(const void *a, const void *b) {
 	return 0;
 }
 
+void *sendMessages(void *param) {
+	Message *m;
+	int i;
+	while(1) {
+		if(messages != NULL) {
+			m = (Message *) pqPop(&messages, &queueLock);
+			for(i = 0; i < MAX_CONNECTIONS; i++) {
+				if(i != m->senderNum) {
+					pthread_mutex_lock(&(connections[i].lock));
+					if(connections[i].valid) {
+						send(connections[i].connection, m->content, strnlen(m->content, MSG_LEN), 0);
+					}
+					pthread_mutex_unlock(&(connections[i].lock));
+				}
+			}
+			free(m);
+		}
+	}
+}
+
 int addMessage(char *buf, int sender) {
 	struct timeval t;
 	gettimeofday(&t, NULL);
@@ -67,6 +87,7 @@ void *handleConnection(void *param) {
 	struct pollfd fds[1];
 	fds[0].fd = me->connection;
 	fds[0].events = POLLIN | POLLPRI | POLLHUP;
+	int bytesRead;
 	while(1) { 
 		//Read from client if there is a message to read
 		fds[0].revents = 0;
@@ -82,14 +103,12 @@ void *handleConnection(void *param) {
 				return;
 			}
 			if(fds[0].revents & (POLLIN | POLLPRI)) { //Check if there is data
-				if(recv(me->connection, readBuff, MSG_LEN, 0) < 0) {
+				bytesRead = recv(me->connection, readBuff, MSG_LEN, 0);
+				if(bytesRead < 0) {
 					printf("recv failed\n");
 				} else {
-					if(!addMessage(readBuff, me->i)) {
-						printf("To send: %s\n", readBuff);
-					}
-					//strncpy(writeBuff, readBuff, MSG_LEN);
-					//send(me->connection, writeBuff, strnlen(writeBuff, MSG_LEN + 1) + 1, 0);
+					readBuff[bytesRead] = '\0';
+					addMessage(readBuff, me->i);
 				}
 			}
 		}
@@ -136,6 +155,12 @@ int main() {
 		//printf("Listening\n");
 	} else {
 		printf("Error in listen\n");
+		return 1;
+	}
+	
+	pthread_t sendThread;
+	if(pthread_create(&sendThread, NULL, sendMessages, NULL)) {
+		printf("Error creating pthread\n");
 		return 1;
 	}
 	

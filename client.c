@@ -34,7 +34,6 @@ void* getInput(void* threadData) {
 	char c;
 	while(1) {
 		fgets(msg, MSG_LEN + 1, stdin);
-		printf("%s\n", msg);
 		if(strlen(msg) > 1) {
 			//Remove '\n'
 			if((pos = strchr(msg, '\n')) != NULL) {
@@ -135,6 +134,7 @@ int main(int argc, char* argv[]) {
 	struct pollfd fds[1];
 	fds[0].fd = socket_desc;
 	fds[0].events = POLLIN | POLLPRI | POLLHUP;
+	int bytesRead;
 	printf("Connected to %s:%d\nType a message and press enter to send it\nType \"/quit\" to disconnect\n\n", ip, port);
 	while(1) { //MAKE THIS STOP IF SOCKET CLOSES USING POLL
 		if(!pthread_mutex_trylock(&(td.lock))) {
@@ -159,10 +159,12 @@ int main(int argc, char* argv[]) {
 			exit(0);
 		}
 		if(fds[0].revents & (POLLIN | POLLPRI)) { //Check if there is something to read
-			if(recv(socket_desc, server_reply, MSG_LEN, 0) < 0) {
+			bytesRead = recv(socket_desc, server_reply, MSG_LEN, 0);
+			if(bytesRead < 0) {
 				printf("recv failed\n");
 			} else {
 				//printf("Reply recieved\n");
+				server_reply[bytesRead] = '\0';
 				if(strcmp(server_reply, "/stop") == 0) {
 					close(socket_desc);
 					pthread_cancel(inputThread);
