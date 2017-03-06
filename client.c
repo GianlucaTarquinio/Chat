@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 
-#define MSG_LEN 9000
+#include "constants.h"
 
 typedef struct threadData {
 	int socket;
@@ -28,11 +28,13 @@ typedef struct threadData {
 void* getInput(void* threadData) {
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 	ThreadData* td = (ThreadData*) threadData;
-	char msg[MSG_LEN + 2];
-	memset(msg, 0, MSG_LEN + 2);
+	char msg[MSG_LEN + 1];
+	memset(msg, 0, MSG_LEN + 1);
 	char *pos;
+	char c;
 	while(1) {
-		fgets(msg, MSG_LEN + 2, stdin);
+		fgets(msg, MSG_LEN + 1, stdin);
+		printf("%s\n", msg);
 		if(strlen(msg) > 1) {
 			//Remove '\n'
 			if((pos = strchr(msg, '\n')) != NULL) {
@@ -45,7 +47,7 @@ void* getInput(void* threadData) {
 				return NULL;
 			}
 			//Send to server
-			if(send(td->socket, msg, strnlen(msg, MSG_LEN + 1) + 1, 0) < 0) {
+			if(send(td->socket, msg, strnlen(msg, MSG_LEN), 0) < 0) {
 				printf("Send failed\n"); //Send failed
 			}
 		}

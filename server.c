@@ -7,10 +7,8 @@
 #include <poll.h>
 #include <sys/time.h>
 
+#include "constants.h"
 #include "pqueue.h"
-
-#define MSG_LEN 9000
-#define MAX_CONNECTIONS 80
 
 typedef struct message {
 	char content[MSG_LEN + 1];

@@ -6,13 +6,13 @@ server: server.o pqueue.o
 client: client.o
 	gcc client.o -o client -lpthread
 	
-server.o: server.c pqueue.h
+server.o: server.c pqueue.h constants.h
 	gcc -c server.c
 	
-client.o: client.c
+client.o: client.c constants.h
 	gcc -c client.c
 	
-queue.o: queue.c pqueue.h
+pqueue.o: pqueue.c pqueue.h
 	gcc -c pqueue.c
 	
 clean:
