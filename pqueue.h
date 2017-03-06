@@ -4,19 +4,12 @@
 #include <pthread.h>
 
 typedef struct pqueue {
-	int size;
-	int maxSize;
-	void** head;
-	int (*compare)(const void*, const void*);
-	void** base;
-	pthread_mutex_t lock;
+	void *data;
+	struct pqueue *next;
 } PQueue;
 
-PQueue* initQueue(int size, int (*compare)(const void*, const void*));
-int push(PQueue* q, void* node);
-void* pop(PQueue* q);
-void* peek(PQueue* q);
-int isEmpty(PQueue* q);
-void freeQueue(PQueue* q);
+int pqPush(PQueue **queue, void *data, int (*compare)(const void*, const void*), pthread_mutex_t lock);
+void *pqPop(PQueue **queue, pthread_mutex_t lock);
+void freeQueue(PQueue **queue, pthread_mutex_t lock);
 
 #endif

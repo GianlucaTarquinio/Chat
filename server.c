@@ -12,7 +12,7 @@
 #define MAX_CONNECTIONS 80
 
 typedef struct message {
-	struct timeval time;
+	struct timeval date;
 } Message;
 
 typedef struct connectionData {
@@ -25,9 +25,9 @@ typedef struct connectionData {
 
 ConnectionData connections[MAX_CONNECTIONS];
 
-int messageCompare(void *a, void *b) {
+int messageCompare(const void *a, const void *b) {
 	Message *m1 = (Message *) a;
-	Message *m2 - (Message *) b;
+	Message *m2 = (Message *) b;
 	if(m1->date.tv_sec < m2->date.tv_usec) {
 		return 1;
 	} else if(m1->date.tv_sec > m2->date.tv_sec) {
