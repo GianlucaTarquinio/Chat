@@ -4,15 +4,17 @@
 #define MSG_LEN 9000
 #define MAX_CONNECTIONS 80
 
-//type: 0 - normal message
-//      1 - exit message
-//      2 - user connected
-//      3 - user disconnected
+//message types
+#define MSG_NORMAL 0
+#define MSG_EXIT 1
+#define MSG_CONN 2
+#define MSG_DCONN 3
+
 typedef struct message {
 	char content[MSG_LEN + 1];
 	struct timeval date;
 	int senderNum;
-	int type;
+	unsigned type;
 } Message;
 
 #endif

@@ -97,7 +97,7 @@ void *handleConnection(void *param) {
 		} else {
 			if(fds[0].revents & POLLHUP) { //Check if socket is closed
 				printf("Client disconnected from slot %d\n", me->i);
-				addMessage("", me->i, 3);
+				addMessage("", me->i, MSG_DCONN);
 				close(me->connection);
 				pthread_mutex_lock(&(me->lock));
 				me->valid = 0;
@@ -110,7 +110,7 @@ void *handleConnection(void *param) {
 					printf("recv failed\n");
 				} else {
 					readBuff[bytesRead] = '\0';
-					addMessage(readBuff, me->i, 0);
+					addMessage(readBuff, me->i, MSG_NORMAL);
 				}
 			}
 		}
@@ -192,7 +192,7 @@ int main() {
 						connections[i].valid = 0;
 					} else {
 						printf("Client connected to slot %d\n", i);
-						addMessage("", i, 2);
+						addMessage("", i, MSG_CONN);
 					}
 					found = 1;
 				} else {

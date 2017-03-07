@@ -143,21 +143,21 @@ int main(int argc, char* argv[]) {
 			} else {
 				//printf("Reply recieved\n");
 				switch(incMessage.type) {
-					case 0:
+					case MSG_NORMAL:
 					printf("%d: %s\n", incMessage.senderNum, incMessage.content);
 					break;
 					
-					case 1:
+					case MSG_EXIT:
 					close(socket_desc);
 					pthread_cancel(inputThread);
 					exit(0);
 					break;
 					
-					case 2:
+					case MSG_CONN:
 					printf("User %d connected.\n", incMessage.senderNum);
 					break;
 					
-					case 3:
+					case MSG_DCONN:
 					printf("User %d disconnected.\n", incMessage.senderNum);
 					break;
 					
