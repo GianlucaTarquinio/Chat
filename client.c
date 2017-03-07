@@ -154,7 +154,11 @@ int main(int argc, char* argv[]) {
 					break;
 					
 					case 2:
-					printf("%s\n", incMessage.content);
+					printf("User %d connected.\n", incMessage.senderNum);
+					break;
+					
+					case 3:
+					printf("User %d disconnected.\n", incMessage.senderNum);
 					break;
 					
 					default:

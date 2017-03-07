@@ -6,7 +6,8 @@
 
 //type: 0 - normal message
 //      1 - exit message
-//      2 - status message
+//      2 - user connected
+//      3 - user disconnected
 typedef struct message {
 	char content[MSG_LEN + 1];
 	struct timeval date;
