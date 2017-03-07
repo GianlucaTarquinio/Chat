@@ -14,8 +14,6 @@
 
 typedef struct threadData {
 	int socket;
-	pthread_mutex_t lock;
-  unsigned done:1;
 } ThreadData;
 
 /** Gets input from the user (use in separate thread). Sets threadData->msg
@@ -40,10 +38,7 @@ void* getInput(void* threadData) {
 				*pos = '\0';
 			}
 			if(strcmp(msg, "/quit") == 0) {
-				pthread_mutex_lock(&(td->lock));
-				td->done = 1;
-				pthread_mutex_unlock(&(td->lock));
-				return NULL;
+				exit(0);
 			}
 			//Send to server
 			if(send(td->socket, msg, strnlen(msg, MSG_LEN), 0) < 0) {
@@ -51,8 +46,7 @@ void* getInput(void* threadData) {
 			}
 		}
 	}
-	
-	return NULL;
+	exit(1);
 }
 
 /** Main function for the program
@@ -116,12 +110,6 @@ int main(int argc, char* argv[]) {
 	pthread_t inputThread;
 	ThreadData td;
 	td.socket = socket_desc;
-	td.done = 0;
-	if(pthread_mutex_init(&(td.lock), NULL)) {
-		printf("Mutex initialization failed\n");
-		close(socket_desc);
-		exit(1);
-	}
 	if(pthread_create(&inputThread, NULL, getInput, &td)) {
 		printf("Error creating thread\n");
 		close(socket_desc);
@@ -134,17 +122,10 @@ int main(int argc, char* argv[]) {
 	fds[0].fd = socket_desc;
 	fds[0].events = POLLIN | POLLPRI | POLLHUP;
 	printf("Connected to %s:%d\nType a message and press enter to send it\nType \"/quit\" to disconnect\n\n", ip, port);
-	while(1) { //MAKE THIS STOP IF SOCKET CLOSES USING POLL
-		if(!pthread_mutex_trylock(&(td.lock))) {
-			if(td.done) {
-				close(socket_desc);
-				exit(0);
-			}
-			pthread_mutex_unlock(&(td.lock));
-		}
+	while(1) {
 		//Read from server if there is a message to read
 		fds[0].revents = 0;
-		if(poll(fds, 1, 0) < 0) {
+		if(poll(fds, 1, -1) < 0) {
 			printf("poll failed\n");
 			close(socket_desc);
 			pthread_cancel(inputThread);
