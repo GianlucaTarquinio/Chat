@@ -97,15 +97,6 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 	
-	//Send some data
-	/*char* message = "a";
-	if(send(socket_desc, message, strlen(message), 0) < 0) {
-		printf("Send failed\n"); //Send failed
-		close(socket_desc);
-		exit(1);
-	}*/
-	//printf("Data sent\n"); //Send succeeded
-	
 	//Start accepting input on a separate thread
 	pthread_t inputThread;
 	ThreadData td;
@@ -141,7 +132,6 @@ int main(int argc, char* argv[]) {
 			if(recv(socket_desc, &incMessage, sizeof(Message), 0) < 0) {
 				printf("recv failed\n");
 			} else {
-				//printf("Reply recieved\n");
 				switch(incMessage.type) {
 					case MSG_NORMAL:
 					printf("%d: %s\n", incMessage.senderNum, incMessage.content);

@@ -139,9 +139,7 @@ int main() {
 	//Configure server address struct
 	struct sockaddr_in server;
 	server.sin_family = AF_INET;
-	//My computers ip on my router is 192.168.1.8, port-forwarding port 11777 from my computer for TCP allows
-	//connection to the server using the router's ip 74.103.143.15 (./runClient 74.103.143.15:11777) from anywhere
-	server.sin_addr.s_addr = INADDR_ANY;//inet_addr("192.168.1.8");
+	server.sin_addr.s_addr = INADDR_ANY;
 	server.sin_port = htons(11777);
 	memset(server.sin_zero, '\0', sizeof(server.sin_zero));
 	
@@ -154,7 +152,6 @@ int main() {
 	
 	//Listen on socket, with up to 7 connection requests queued
 	if(listen(socket_desc, 7) == 0) {
-		//printf("Listening\n");
 	} else {
 		printf("Error in listen\n");
 		return 1;
