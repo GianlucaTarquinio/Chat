@@ -129,12 +129,10 @@ int main(int argc, char* argv[]) {
 	}
 	
 	//Recieve a reply from the server
-	char server_reply[MSG_LEN + 1];
-	memset(server_reply, '\0', MSG_LEN + 1);
+	Message incMessage;
 	struct pollfd fds[1];
 	fds[0].fd = socket_desc;
 	fds[0].events = POLLIN | POLLPRI | POLLHUP;
-	int bytesRead;
 	printf("Connected to %s:%d\nType a message and press enter to send it\nType \"/quit\" to disconnect\n\n", ip, port);
 	while(1) { //MAKE THIS STOP IF SOCKET CLOSES USING POLL
 		if(!pthread_mutex_trylock(&(td.lock))) {
@@ -159,18 +157,27 @@ int main(int argc, char* argv[]) {
 			exit(0);
 		}
 		if(fds[0].revents & (POLLIN | POLLPRI)) { //Check if there is something to read
-			bytesRead = recv(socket_desc, server_reply, MSG_LEN, 0);
-			if(bytesRead < 0) {
+			if(recv(socket_desc, &incMessage, sizeof(Message), 0) < 0) {
 				printf("recv failed\n");
 			} else {
 				//printf("Reply recieved\n");
-				server_reply[bytesRead] = '\0';
-				if(strcmp(server_reply, "/stop") == 0) {
+				switch(incMessage.type) {
+					case 0:
+					printf("%d: %s\n", incMessage.senderNum, incMessage.content);
+					break;
+					
+					case 1:
 					close(socket_desc);
 					pthread_cancel(inputThread);
 					exit(0);
-				} else {
-					printf("%s\n", server_reply); //PRINT THIS INTO A FILE INSTEAD
+					break;
+					
+					case 2:
+					printf("%s\n", incMessage.content);
+					break;
+					
+					default:
+					break;
 				}
 			}
 		}

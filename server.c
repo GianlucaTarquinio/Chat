@@ -48,7 +48,7 @@ void *sendMessages(void *param) {
 				if(i != m->senderNum) {
 					pthread_mutex_lock(&(connections[i].lock));
 					if(connections[i].valid) {
-						send(connections[i].connection, m->content, strnlen(m->content, MSG_LEN), 0);
+						send(connections[i].connection, m, sizeof(Message), 0);
 					}
 					pthread_mutex_unlock(&(connections[i].lock));
 				}
@@ -58,11 +58,12 @@ void *sendMessages(void *param) {
 	}
 }
 
-int addMessage(char *buf, int sender) {
+int addMessage(char *buf, int sender, int type) {
 	struct timeval t;
 	gettimeofday(&t, NULL);
 	Message *m = (Message *) malloc(sizeof(Message));
 	m->senderNum = sender;
+	m->type = type;
 	strncpy(m->content, buf, MSG_LEN);
 	*(m->content + MSG_LEN) = '\0';
 	m->date = t;
@@ -90,7 +91,7 @@ void *handleConnection(void *param) {
 		} else {
 			if(fds[0].revents & POLLHUP) { //Check if socket is closed
 				printf("Client disconnected from slot %d\n", me->i);
-				addMessage("User disconnected.", me->i);
+				addMessage("User disconnected.", me->i, 2);
 				close(me->connection);
 				pthread_mutex_lock(&(me->lock));
 				me->valid = 0;
@@ -103,7 +104,7 @@ void *handleConnection(void *param) {
 					printf("recv failed\n");
 				} else {
 					readBuff[bytesRead] = '\0';
-					addMessage(readBuff, me->i);
+					addMessage(readBuff, me->i, 0);
 				}
 			}
 		}
@@ -180,7 +181,7 @@ int main() {
 						connections[i].valid = 0;
 					} else {
 						printf("Client connected to slot %d\n", i);
-						addMessage("User connected.", i);
+						addMessage("User connected.", i, 2);
 					}
 					found = 1;
 				} else {
