@@ -20,7 +20,8 @@ typedef struct connectionData {
 
 ConnectionData connections[MAX_CONNECTIONS];
 PQueue *messages;
-pthread_mutex_t queueLock;
+pthread_mutex_t queueLock, sendLock; //sendLock is just there so I can use pthread_cond_wait
+pthread_cond_t toSend;
 
 int messageCompare(const void *a, const void *b) {
 	Message *m1 = (Message *) a;
@@ -41,8 +42,9 @@ int messageCompare(const void *a, const void *b) {
 void *sendMessages(void *param) {
 	Message *m;
 	int i;
+	pthread_mutex_lock(&sendLock);
 	while(1) {
-		if(messages != NULL) {
+		while(messages != NULL) {
 			m = (Message *) pqPop(&messages, &queueLock);
 			for(i = 0; i < MAX_CONNECTIONS; i++) {
 				if(i != m->senderNum) {
@@ -55,11 +57,13 @@ void *sendMessages(void *param) {
 			}
 			free(m);
 		}
+		pthread_cond_wait(&toSend, &sendLock);
 	}
 }
 
 int addMessage(char *buf, int sender, int type) {
 	struct timeval t;
+	int result;
 	gettimeofday(&t, NULL);
 	Message *m = (Message *) malloc(sizeof(Message));
 	m->senderNum = sender;
@@ -67,7 +71,9 @@ int addMessage(char *buf, int sender, int type) {
 	strncpy(m->content, buf, MSG_LEN);
 	*(m->content + MSG_LEN) = '\0';
 	m->date = t;
-	return pqPush(&messages, m, messageCompare, &queueLock);
+	result = pqPush(&messages, m, messageCompare, &queueLock);
+	pthread_cond_signal(&toSend);
+	return result;
 }
 
 /** Handle a connection with a client
@@ -86,7 +92,7 @@ void *handleConnection(void *param) {
 	while(1) { 
 		//Read from client if there is a message to read
 		fds[0].revents = 0;
-		if(poll(fds, 1, 0) < 0) {
+		if(poll(fds, 1, -1) < 0) {
 			printf("poll failed\n");
 		} else {
 			if(fds[0].revents & POLLHUP) { //Check if socket is closed
@@ -151,6 +157,11 @@ int main() {
 		//printf("Listening\n");
 	} else {
 		printf("Error in listen\n");
+		return 1;
+	}
+	
+	if(pthread_mutex_init(&(sendLock), NULL) || pthread_cond_init(&(toSend), NULL)) {
+		printf("Initialization failed\n");
 		return 1;
 	}
 	
