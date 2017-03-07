@@ -1,16 +1,19 @@
 all: server client
 
-server: server.o pqueue.o
-	gcc server.o pqueue.o -o server
+server: server.o chat.o pqueue.o
+	gcc server.o chat.o pqueue.o -o server
 
-client: client.o
-	gcc client.o -o client -lpthread
+client: client.o chat.o
+	gcc client.o chat.o -o client -lpthread
 	
-server.o: server.c pqueue.h chat.h
+server.o: server.c chat.h pqueue.h
 	gcc -c server.c
 	
 client.o: client.c chat.h
 	gcc -c client.c
+
+chat.o: chat.c chat.h
+	gcc -c chat.c
 	
 pqueue.o: pqueue.c pqueue.h
 	gcc -c pqueue.c

@@ -1,6 +1,8 @@
 #ifndef CHAT_H
 #define CHAT_H
 
+#include <sys/time.h>
+
 #define MSG_LEN 9000
 #define MAX_CONNECTIONS 80
 
@@ -16,5 +18,8 @@ typedef struct message {
 	int senderNum;
 	unsigned type;
 } Message;
+
+int serializeMessage(Message *m, char *buf);
+int unserializeMessage(Message *m, char *buf);
 
 #endif
