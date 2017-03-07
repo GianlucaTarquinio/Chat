@@ -6,10 +6,10 @@ server: server.o pqueue.o
 client: client.o
 	gcc client.o -o client -lpthread
 	
-server.o: server.c pqueue.h constants.h
+server.o: server.c pqueue.h chat.h
 	gcc -c server.c
 	
-client.o: client.c constants.h
+client.o: client.c chat.h
 	gcc -c client.c
 	
 pqueue.o: pqueue.c pqueue.h

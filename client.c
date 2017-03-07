@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 
-#include "constants.h"
+#include "chat.h"
 
 typedef struct threadData {
 	int socket;

@@ -7,14 +7,8 @@
 #include <poll.h>
 #include <sys/time.h>
 
-#include "constants.h"
+#include "chat.h"
 #include "pqueue.h"
-
-typedef struct message {
-	char content[MSG_LEN + 1];
-	struct timeval date;
-	int senderNum;
-} Message;
 
 typedef struct connectionData {
 	pthread_mutex_t lock;
