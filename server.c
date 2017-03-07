@@ -119,7 +119,12 @@ void *handleConnection(void *param) {
 
 /** Main function for server
 */
-int main() {
+int main(int argc, char *argv[]) {
+	if(argc < 2) {
+		printf("Usage: %s <portnumber>\n", argv[0]);
+		return 1;
+	}
+	
 	//init connection data
 	if(pthread_mutex_init(&(queueLock), NULL)) {
 		printf("Initialization failed\n");
@@ -140,7 +145,7 @@ int main() {
 	struct sockaddr_in server;
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(11777);
+	server.sin_port = htons(atoi(argv[1]));
 	memset(server.sin_zero, '\0', sizeof(server.sin_zero));
 	
 	//Bind server struct to socket
