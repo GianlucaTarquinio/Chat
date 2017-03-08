@@ -74,6 +74,7 @@ int addMessage(char *buf, uint32_t sender, uint32_t type) {
 	strncpy(m->content, buf, MSG_LEN);
 	*(m->content + MSG_LEN) = '\0';
 	m->date = t;
+	*(m->name + NAME_LEN) = '\0';
 	result = pqPush(&messages, m, messageCompare, &queueLock);
 	pthread_cond_signal(&toSend);
 	return result;
