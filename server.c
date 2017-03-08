@@ -14,7 +14,7 @@ typedef struct connectionData {
 	pthread_mutex_t lock;
 	unsigned valid:1;
 	pthread_t thread;
-	int i;
+	uint32_t i;
 	int connection;
 } ConnectionData;
 
@@ -41,7 +41,7 @@ int messageCompare(const void *a, const void *b) {
 
 void *sendMessages(void *param) {
 	Message *m;
-	int i;
+	uint32_t i;
 	while(1) {
 		pthread_mutex_lock(&queueLock);
 		while(messages != NULL) {
@@ -64,7 +64,7 @@ void *sendMessages(void *param) {
 	}
 }
 
-int addMessage(char *buf, int sender, int type) {
+int addMessage(char *buf, uint32_t sender, uint32_t type) {
 	struct timeval t;
 	int result;
 	gettimeofday(&t, NULL);
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
 		printf("Initialization failed\n");
 		return 1;
 	}
-	int i;
+	uint32_t i;
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
 		connections[i].valid = 0;
 		if(pthread_mutex_init(&(connections[i].lock), NULL)) {

@@ -2,6 +2,7 @@
 #define CHAT_H
 
 #include <sys/time.h>
+#include <stdint.h>
 
 #define MAX_CONNECTIONS 80
 #define MSG_LEN 255
@@ -16,9 +17,9 @@
 typedef struct message {
 	char content[MSG_LEN + 1];
 	struct timeval date;
-	int senderNum;
+	uint32_t senderNum;
 	char name[NAME_LEN + 1];
-	unsigned type;
+	uint32_t type;
 } Message;
 
 int serializeMessage(Message *m, char *buf);
