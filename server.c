@@ -20,7 +20,7 @@ typedef struct connectionData {
 
 ConnectionData connections[MAX_CONNECTIONS];
 PQueue *messages;
-pthread_mutex_t queueLock, sendLock; //sendLock is just there so I can use pthread_cond_wait
+pthread_mutex_t queueLock;
 pthread_cond_t toSend;
 
 int messageCompare(const void *a, const void *b) {
@@ -42,9 +42,10 @@ int messageCompare(const void *a, const void *b) {
 void *sendMessages(void *param) {
 	Message *m;
 	int i;
-	pthread_mutex_lock(&sendLock);
 	while(1) {
+		pthread_mutex_lock(&queueLock);
 		while(messages != NULL) {
+			pthread_mutex_unlock(&queueLock);
 			m = (Message *) pqPop(&messages, &queueLock);
 			for(i = 0; i < MAX_CONNECTIONS; i++) {
 				if(i != m->senderNum) {
@@ -56,8 +57,10 @@ void *sendMessages(void *param) {
 				}
 			}
 			free(m);
+			pthread_mutex_lock(&queueLock);
 		}
-		pthread_cond_wait(&toSend, &sendLock);
+		pthread_cond_wait(&toSend, &queueLock);
+		pthread_mutex_unlock(&queueLock);
 	}
 }
 
@@ -162,7 +165,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	
-	if(pthread_mutex_init(&(sendLock), NULL) || pthread_cond_init(&(toSend), NULL)) {
+	if(pthread_cond_init(&(toSend), NULL)) {
 		printf("Initialization failed\n");
 		return 1;
 	}

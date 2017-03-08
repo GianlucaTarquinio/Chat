@@ -3,8 +3,9 @@
 
 #include <sys/time.h>
 
-#define MSG_LEN 9000
 #define MAX_CONNECTIONS 80
+#define MSG_LEN 255
+#define NAME_LEN 30
 
 //message types
 #define MSG_NORMAL 0
@@ -16,6 +17,7 @@ typedef struct message {
 	char content[MSG_LEN + 1];
 	struct timeval date;
 	int senderNum;
+	char name[NAME_LEN + 1];
 	unsigned type;
 } Message;
 
