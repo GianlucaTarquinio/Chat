@@ -11,11 +11,12 @@
 #include "pqueue.h"
 
 typedef struct connectionData {
+	int connection;
 	pthread_mutex_t lock;
 	unsigned valid:1;
 	pthread_t thread;
 	uint32_t i;
-	int connection;
+	char name[NAME_LEN + 1];
 } ConnectionData;
 
 ConnectionData connections[MAX_CONNECTIONS];
@@ -77,7 +78,7 @@ int addMessage(char *buf, uint32_t sender, uint32_t type) {
 	strncpy(m->content, buf, MSG_LEN);
 	*(m->content + MSG_LEN) = '\0';
 	m->date = t;
-	strncpy(m->name, "Gianluca", NAME_LEN);
+	strncpy(m->name, connections[sender].name, NAME_LEN);
 	*(m->name + NAME_LEN) = '\0';
 	result = pqPush(&messages, m, messageCompare, &queueLock);
 	pthread_cond_signal(&toSend);
@@ -129,7 +130,7 @@ void *handleConnection(void *param) {
 */
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
-		printf("Usage: %s <portnumber>\n", argv[0]);
+		printf("Usage: %s <port number>\n", argv[0]);
 		return 1;
 	}
 	
@@ -196,6 +197,8 @@ int main(int argc, char *argv[]) {
 					connections[i].valid = 1;
 					connections[i].connection = conn;
 					connections[i].i = i;
+					strncpy(connections[i].name, "Gianluca", NAME_LEN);
+					connections[i].name[NAME_LEN] = '\0';
 					if(pthread_create(&(connections[i].thread), NULL, handleConnection, connections + i)) {
 						printf("Error creating pthread\n");
 						close(conn);

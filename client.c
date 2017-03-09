@@ -53,7 +53,7 @@ void* getInput(void* threadData) {
 */
 int main(int argc, char* argv[]) {
 	if(argc < 2) {
-		printf(BOLD "Usage:" NORMAL " %s <server address>:<portnumber>\n", argv[0]);
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number>\n", argv[0]);
 		exit(1);
 	}
 	char ip[32], *arg, ch;
@@ -62,12 +62,12 @@ int main(int argc, char* argv[]) {
 	uint16_t port;
 	arg = argv[1];
 	if(*arg == ':') {
-		printf(BOLD "Usage:" NORMAL " %s <server address>:<portnumber>\n", argv[0]);
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number>\n", argv[0]);
 		exit(1);
 	}
 	while((ch = *(arg++)) != ':') {
 		if(ch == '\0') {
-			printf(BOLD "Usage:" NORMAL " %s <server address>:<portnumber>\n", argv[0]);
+			printf(BOLD "Usage:" NORMAL " %s <server address>:<port number>\n", argv[0]);
 			exit(1);
 		}
 		ip[i++] = ch;
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
 	ip[i] = '\0';
 	port = atoi(arg);
 	if(port < 1) {
-		printf(BOLD "Usage:" NORMAL " %s <server address>:<portnumber>\n", argv[0]);
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number>\n", argv[0]);
 		exit(1);
 	}
 	int socket_desc = socket(AF_INET, SOCK_STREAM, 0); //Make socket
