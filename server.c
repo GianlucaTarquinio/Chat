@@ -100,6 +100,7 @@ void *handleConnection(void *param) {
 	fd.fd = me->connection;
 	fd.events = POLLIN | POLLPRI | POLLHUP;
 	fd.revents = 0;
+	int bytesRead;
 	
 	int code = START_CODE;
 	if(send(me->connection, &code, 1, 0) < 0) {
@@ -127,7 +128,8 @@ void *handleConnection(void *param) {
 		return NULL;
 	}
 	if(fd.revents & (POLLIN | POLLPRI)) {
-		if(recv(me->connection, me->name, NAME_LEN, 0) < 1) {
+		bytesRead = recv(me->connection, me->name, NAME_LEN, 0);
+		if(bytesRead < 1) {
 			close(me->connection);
 			printf("Could not get name from user %d\n", me->i);
 			pthread_mutex_lock(&(me->lock));
@@ -135,7 +137,7 @@ void *handleConnection(void *param) {
 			pthread_mutex_unlock(&(me->lock));
 			return NULL;
 		}
-		me->name[NAME_LEN] = '\0';
+		me->name[bytesRead] = '\0';
 		addMessage("", me->i, MSG_CONN);
 	} else {
 		close(me->connection);
@@ -146,7 +148,6 @@ void *handleConnection(void *param) {
 		return NULL;
 	}
 	
-	int bytesRead;
 	while(1) { 
 		//Read from client if there is a message to read
 		fd.revents = 0;
