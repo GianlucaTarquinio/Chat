@@ -15,13 +15,14 @@
 #define MSG_DCONN 3
 
 typedef struct message {
+	uint32_t type;
 	char content[MSG_LEN + 1];
 	struct timeval date;
 	uint32_t senderNum;
 	char name[NAME_LEN + 1];
-	uint32_t type;
 } Message;
 
+void printBuf(char *buf);
 int serializeMessage(Message *m, char *buf);
 int unserializeMessage(Message *m, char *buf);
 

@@ -108,6 +108,7 @@ int main(int argc, char* argv[]) {
 	}
 	
 	//Recieve a reply from the server
+	char recvBuf[14 + NAME_LEN + MSG_LEN];
 	Message incMessage;
 	struct pollfd fds[1];
 	fds[0].fd = socket_desc;
@@ -129,12 +130,13 @@ int main(int argc, char* argv[]) {
 			exit(0);
 		}
 		if(fds[0].revents & (POLLIN | POLLPRI)) { //Check if there is something to read
-			if(recv(socket_desc, &incMessage, sizeof(Message), 0) < 0) {
+			if(recv(socket_desc, recvBuf, 14 + NAME_LEN + MSG_LEN, 0) < 0) {
 				printf("recv failed\n");
 			} else {
+				unserializeMessage(&incMessage, recvBuf);
 				switch(incMessage.type) {
 					case MSG_NORMAL:
-					printf("%d: %s\n", incMessage.senderNum, incMessage.content);
+					printf("%s: %s\n", incMessage.name, incMessage.content);
 					break;
 					
 					case MSG_EXIT:
@@ -152,6 +154,7 @@ int main(int argc, char* argv[]) {
 					break;
 					
 					default:
+					//printf("Recieved unrecognized message type: %ld\n, (long) incMessage.type);
 					break;
 				}
 			}

@@ -1,3 +1,6 @@
+#include <string.h>
+#include <stdio.h>
+
 #include "chat.h"
 
 //returns number of bytes written to buf
@@ -30,7 +33,7 @@ int unserializeMessage(Message *m, char *buf) {
 	uint32_t type, senderNum, seconds;
 	int nameLen, messageLen;
 	nameLen = strnlen(buf + 12, NAME_LEN);
-	messageLen = strnlen(13 + nameLen, MSG_LEN);
+	messageLen = strnlen(buf + 13 + nameLen, MSG_LEN);
 	
 	memcpy(&type, buf, 4);
 	m->type = ntohl(type);
@@ -39,8 +42,8 @@ int unserializeMessage(Message *m, char *buf) {
 	memcpy(&seconds, buf + 8, 4);
 	m->date.tv_sec = (time_t) ntohl(seconds);
 	strncpy(m->name, buf + 12, nameLen);
-	m->name[12 + nameLen] = '\0';
+	m->name[nameLen] = '\0';
 	strncpy(m->content, buf + 13 + nameLen, messageLen);
-	m->content[13 + nameLen + messageLen] = '\0';
+	m->content[messageLen] = '\0';
 	return 14 + nameLen + messageLen;
 }

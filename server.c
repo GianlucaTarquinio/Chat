@@ -42,16 +42,19 @@ int messageCompare(const void *a, const void *b) {
 void *sendMessages(void *param) {
 	Message *m;
 	uint32_t i;
+	char sendBuf[14 + NAME_LEN + MSG_LEN];
+	int numBytes;
 	while(1) {
 		pthread_mutex_lock(&queueLock);
 		while(messages != NULL) {
 			pthread_mutex_unlock(&queueLock);
 			m = (Message *) pqPop(&messages, &queueLock);
+			numBytes = serializeMessage(m, sendBuf);
 			for(i = 0; i < MAX_CONNECTIONS; i++) {
 				if(i != m->senderNum) {
 					pthread_mutex_lock(&(connections[i].lock));
 					if(connections[i].valid) {
-						send(connections[i].connection, m, sizeof(Message), 0);
+						send(connections[i].connection, sendBuf, numBytes, 0);
 					}
 					pthread_mutex_unlock(&(connections[i].lock));
 				}
@@ -74,6 +77,7 @@ int addMessage(char *buf, uint32_t sender, uint32_t type) {
 	strncpy(m->content, buf, MSG_LEN);
 	*(m->content + MSG_LEN) = '\0';
 	m->date = t;
+	strncpy(m->name, "Gianluca", 8);
 	*(m->name + NAME_LEN) = '\0';
 	result = pqPush(&messages, m, messageCompare, &queueLock);
 	pthread_cond_signal(&toSend);
