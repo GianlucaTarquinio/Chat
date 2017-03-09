@@ -42,7 +42,7 @@ int messageCompare(const void *a, const void *b) {
 void *sendMessages(void *param) {
 	Message *m;
 	uint32_t i;
-	char sendBuf[14 + NAME_LEN + MSG_LEN];
+	char sendBuf[MSG_BUF_LEN];
 	int numBytes;
 	while(1) {
 		pthread_mutex_lock(&queueLock);
@@ -77,7 +77,7 @@ int addMessage(char *buf, uint32_t sender, uint32_t type) {
 	strncpy(m->content, buf, MSG_LEN);
 	*(m->content + MSG_LEN) = '\0';
 	m->date = t;
-	strncpy(m->name, "Gianluca", 8);
+	strncpy(m->name, "Gianluca", NAME_LEN);
 	*(m->name + NAME_LEN) = '\0';
 	result = pqPush(&messages, m, messageCompare, &queueLock);
 	pthread_cond_signal(&toSend);

@@ -7,7 +7,7 @@
 //[type, senderNum, dateSeconds, name, '\0',            content,          '\0']
 // 0     4          8            12    12+strlen(name)  13+strlen(name)   13+strlen(name)+strlen(message)
 //maximum strlen(name) is NAME_LEN, maximum strlen(message) is MSG_LEN
-//buffer must have size >= 14+NAME_LEN+MSG_LEN
+//buffer must have size >= MSG_BUF_LEN
 int serializeMessage(Message *m, char *buf) {
 	uint32_t type = htonl(m->type);
 	uint32_t senderNum = htonl(m->senderNum);
@@ -28,7 +28,7 @@ int serializeMessage(Message *m, char *buf) {
 //[type, senderNum, dateSeconds, name, '\0',            content,          '\0']
 // 0     4          8            12    12+strlen(name)  13+strlen(name)   13+strlen(name)+strlen(message)
 //maximum strlen(name) is NAME_LEN, maximum strlen(message) is MSG_LEN
-//buffer must have size >= 14+NAME_LEN+MSG_LEN
+//buffer must have size >= MSG_BUF_LEN
 int unserializeMessage(Message *m, char *buf) {
 	uint32_t type, senderNum, seconds;
 	int nameLen, messageLen;

@@ -53,7 +53,7 @@ void* getInput(void* threadData) {
 */
 int main(int argc, char* argv[]) {
 	if(argc < 2) {
-		printf("Usage: %s <server address>:<portnumber>\n", argv[0]);
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<portnumber>\n", argv[0]);
 		exit(1);
 	}
 	char ip[32], *arg, ch;
@@ -62,12 +62,12 @@ int main(int argc, char* argv[]) {
 	uint16_t port;
 	arg = argv[1];
 	if(*arg == ':') {
-		printf("Usage: %s <server address>:<portnumber>\n", argv[0]);
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<portnumber>\n", argv[0]);
 		exit(1);
 	}
 	while((ch = *(arg++)) != ':') {
 		if(ch == '\0') {
-			printf("Usage: %s <server address>:<portnumber>\n", argv[0]);
+			printf(BOLD "Usage:" NORMAL " %s <server address>:<portnumber>\n", argv[0]);
 			exit(1);
 		}
 		ip[i++] = ch;
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
 	ip[i] = '\0';
 	port = atoi(arg);
 	if(port < 1) {
-		printf("Usage: %s <server address>:<portnumber>\n", argv[0]);
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<portnumber>\n", argv[0]);
 		exit(1);
 	}
 	int socket_desc = socket(AF_INET, SOCK_STREAM, 0); //Make socket
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 	server.sin_port = htons(port); //This is the port
 	memset(server.sin_zero, '\0', sizeof(server.sin_zero));
 	//Connect to server
-	printf("Connecting...\n");
+	printf(BOLD "Connecting..." NORMAL "\n");
 	if(connect(socket_desc, (struct sockaddr *) &server , sizeof(server)) < 0) {
 		printf("Connection error\n"); //Connect failed
 		close(socket_desc);
@@ -108,12 +108,12 @@ int main(int argc, char* argv[]) {
 	}
 	
 	//Recieve a reply from the server
-	char recvBuf[14 + NAME_LEN + MSG_LEN];
+	char recvBuf[MSG_BUF_LEN];
 	Message incMessage;
 	struct pollfd fds[1];
 	fds[0].fd = socket_desc;
 	fds[0].events = POLLIN | POLLPRI | POLLHUP;
-	printf("Connected to %s:%d\nType a message and press enter to send it\nType \"/quit\" to disconnect\n\n", ip, port);
+	printf(BOLD "Connected to %s:%d\nType a message and press enter to send it\nType \"/quit\" to disconnect" NORMAL "\n\n", ip, port);
 	while(1) {
 		//Read from server if there is a message to read
 		fds[0].revents = 0;
@@ -124,19 +124,19 @@ int main(int argc, char* argv[]) {
 			exit(1);
 		}
 		if(fds[0].revents & POLLHUP) {
-			printf("Connection lost.\n");
+			printf(BOLD "Connection lost." NORMAL "\n");
 			close(socket_desc);
 			pthread_cancel(inputThread);
 			exit(0);
 		}
 		if(fds[0].revents & (POLLIN | POLLPRI)) { //Check if there is something to read
-			if(recv(socket_desc, recvBuf, 14 + NAME_LEN + MSG_LEN, 0) < 0) {
+			if(recv(socket_desc, recvBuf, MSG_BUF_LEN, 0) < 0) {
 				printf("recv failed\n");
 			} else {
 				unserializeMessage(&incMessage, recvBuf);
 				switch(incMessage.type) {
 					case MSG_NORMAL:
-					printf("%s: %s\n", incMessage.name, incMessage.content);
+					printf(BOLD "%s:" NORMAL " %s\n", incMessage.name, incMessage.content);
 					break;
 					
 					case MSG_EXIT:
@@ -146,11 +146,11 @@ int main(int argc, char* argv[]) {
 					break;
 					
 					case MSG_CONN:
-					printf("User %d connected.\n", incMessage.senderNum);
+					printf(BOLD "%s connected." NORMAL "\n", incMessage.name);
 					break;
 					
 					case MSG_DCONN:
-					printf("User %d disconnected.\n", incMessage.senderNum);
+					printf(BOLD "%s disconnected." NORMAL "\n", incMessage.name);
 					break;
 					
 					default:
