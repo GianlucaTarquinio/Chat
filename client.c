@@ -52,8 +52,8 @@ void* getInput(void* threadData) {
 /** Main function for the program
 */
 int main(int argc, char* argv[]) {
-	if(argc < 2) {
-		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number>\n", argv[0]);
+	if(argc < 3) {
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number> <name>\n", argv[0]);
 		exit(1);
 	}
 	char ip[32], *arg, ch;
@@ -62,12 +62,12 @@ int main(int argc, char* argv[]) {
 	uint16_t port;
 	arg = argv[1];
 	if(*arg == ':') {
-		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number>\n", argv[0]);
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number> <name>\n", argv[0]);
 		exit(1);
 	}
 	while((ch = *(arg++)) != ':') {
 		if(ch == '\0') {
-			printf(BOLD "Usage:" NORMAL " %s <server address>:<port number>\n", argv[0]);
+			printf(BOLD "Usage:" NORMAL " %s <server address>:<port number> <name>\n", argv[0]);
 			exit(1);
 		}
 		ip[i++] = ch;
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
 	ip[i] = '\0';
 	port = atoi(arg);
 	if(port < 1) {
-		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number>\n", argv[0]);
+		printf(BOLD "Usage:" NORMAL " %s <server address>:<port number> <name>\n", argv[0]);
 		exit(1);
 	}
 	int socket_desc = socket(AF_INET, SOCK_STREAM, 0); //Make socket
@@ -97,6 +97,47 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 	
+	//Recieve messages from server
+	char recvBuf[MSG_BUF_LEN];
+	Message incMessage;
+	struct pollfd fd;
+	fd.fd = socket_desc;
+	fd.events = POLLIN | POLLPRI | POLLHUP;
+	fd.revents = 0;
+	
+	//Wait for server code and send name
+	char code = 0;
+	if(poll(&fd, 1, 10000) < 0) {
+		printf("Poll failed\n");
+		close(socket_desc);
+		exit(1);
+	}
+	if(fd.revents & POLLHUP) {
+		printf("Validation failed\n");
+		close(socket_desc);
+		exit(1);
+	}
+	if(fd.revents & (POLLIN | POLLPRI)) {
+		if(recv(socket_desc, &code, 1, 0) < 0) {
+			printf("recv failed\n");
+			close(socket_desc);
+			exit(1);
+		}
+	} else {
+		printf("Validation failed\n");
+		close(socket_desc);
+		exit(1);
+	}
+	if(code != START_CODE) {
+		printf("Validation failed\n");
+		exit(1);
+	}
+	if(send(socket_desc, argv[2], strnlen(argv[2], NAME_LEN), 0) < 0) {
+		printf("Name send failed\n");
+		close(socket_desc);
+		exit(1);
+	}
+	
 	//Start accepting input on a separate thread
 	pthread_t inputThread;
 	ThreadData td;
@@ -107,29 +148,23 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 	
-	//Recieve a reply from the server
-	char recvBuf[MSG_BUF_LEN];
-	Message incMessage;
-	struct pollfd fds[1];
-	fds[0].fd = socket_desc;
-	fds[0].events = POLLIN | POLLPRI | POLLHUP;
 	printf(BOLD "Connected to %s:%d\nType a message and press enter to send it\nType \"/quit\" to disconnect" NORMAL "\n\n", ip, port);
 	while(1) {
 		//Read from server if there is a message to read
-		fds[0].revents = 0;
-		if(poll(fds, 1, -1) < 0) {
+		fd.revents = 0;
+		if(poll(&fd, 1, -1) < 0) {
 			printf("poll failed\n");
 			close(socket_desc);
 			pthread_cancel(inputThread);
 			exit(1);
 		}
-		if(fds[0].revents & POLLHUP) {
+		if(fd.revents & POLLHUP) {
 			printf(BOLD "Connection lost." NORMAL "\n");
 			close(socket_desc);
 			pthread_cancel(inputThread);
 			exit(0);
 		}
-		if(fds[0].revents & (POLLIN | POLLPRI)) { //Check if there is something to read
+		if(fd.revents & (POLLIN | POLLPRI)) { //Check if there is something to read
 			if(recv(socket_desc, recvBuf, MSG_BUF_LEN, 0) < 0) {
 				printf("recv failed\n");
 			} else {

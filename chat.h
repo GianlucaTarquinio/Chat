@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <stdint.h>
 
+#define START_CODE 17
 #define MAX_CONNECTIONS 80
 #define MSG_LEN 255
 #define NAME_LEN 50

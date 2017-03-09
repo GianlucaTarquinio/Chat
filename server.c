@@ -55,7 +55,9 @@ void *sendMessages(void *param) {
 				if(i != m->senderNum) {
 					pthread_mutex_lock(&(connections[i].lock));
 					if(connections[i].valid) {
-						send(connections[i].connection, sendBuf, numBytes, 0);
+						if(send(connections[i].connection, sendBuf, numBytes, 0) < 0) {
+							printf("Send failed\n");
+						}
 					}
 					pthread_mutex_unlock(&(connections[i].lock));
 				}
@@ -94,26 +96,73 @@ void *handleConnection(void *param) {
 	char readBuff[MSG_LEN + 1], writeBuff[MSG_LEN + 1];
 	memset(readBuff, '\0', MSG_LEN + 1);
 	memset(writeBuff, '\0', MSG_LEN + 1);
-	struct pollfd fds[1];
-	fds[0].fd = me->connection;
-	fds[0].events = POLLIN | POLLPRI | POLLHUP;
+	struct pollfd fd;
+	fd.fd = me->connection;
+	fd.events = POLLIN | POLLPRI | POLLHUP;
+	fd.revents = 0;
+	
+	int code = START_CODE;
+	if(send(me->connection, &code, 1, 0) < 0) {
+		close(me->connection);
+		printf("Failed to send code to user %d\n", me->i);
+		pthread_mutex_lock(&(me->lock));
+		me->valid = 0;
+		pthread_mutex_unlock(&(me->lock));
+		return NULL;
+	}
+	
+	if(poll(&fd, 1, 10000) < 0) {
+		close(me->connection);
+		printf("Could not get name from user %d\n", me->i);
+		pthread_mutex_lock(&(me->lock));
+		me->valid = 0;
+		pthread_mutex_unlock(&(me->lock));
+		return NULL;
+	}
+	if(fd.revents & POLLHUP) {
+		printf("Could not get name from user %d\n", me->i);
+		pthread_mutex_lock(&(me->lock));
+		me->valid = 0;
+		pthread_mutex_unlock(&(me->lock));
+		return NULL;
+	}
+	if(fd.revents & (POLLIN | POLLPRI)) {
+		if(recv(me->connection, me->name, NAME_LEN, 0) < 1) {
+			close(me->connection);
+			printf("Could not get name from user %d\n", me->i);
+			pthread_mutex_lock(&(me->lock));
+			me->valid = 0;
+			pthread_mutex_unlock(&(me->lock));
+			return NULL;
+		}
+		me->name[NAME_LEN] = '\0';
+		addMessage("", me->i, MSG_CONN);
+	} else {
+		close(me->connection);
+		printf("Could not get name from user %d\n", me->i);
+		pthread_mutex_lock(&(me->lock));
+		me->valid = 0;
+		pthread_mutex_unlock(&(me->lock));
+		return NULL;
+	}
+	
 	int bytesRead;
 	while(1) { 
 		//Read from client if there is a message to read
-		fds[0].revents = 0;
-		if(poll(fds, 1, -1) < 0) {
+		fd.revents = 0;
+		if(poll(&fd, 1, -1) < 0) {
 			printf("poll failed\n");
 		} else {
-			if(fds[0].revents & POLLHUP) { //Check if socket is closed
+			if(fd.revents & POLLHUP) { //Check if socket is closed
 				printf("Client disconnected from slot %d\n", me->i);
 				addMessage("", me->i, MSG_DCONN);
 				close(me->connection);
 				pthread_mutex_lock(&(me->lock));
 				me->valid = 0;
 				pthread_mutex_unlock(&(me->lock));
-				return;
+				return NULL;
 			}
-			if(fds[0].revents & (POLLIN | POLLPRI)) { //Check if there is data
+			if(fd.revents & (POLLIN | POLLPRI)) { //Check if there is data
 				bytesRead = recv(me->connection, readBuff, MSG_LEN, 0);
 				if(bytesRead < 0) {
 					printf("recv failed\n");
@@ -197,15 +246,12 @@ int main(int argc, char *argv[]) {
 					connections[i].valid = 1;
 					connections[i].connection = conn;
 					connections[i].i = i;
-					strncpy(connections[i].name, "Gianluca", NAME_LEN);
-					connections[i].name[NAME_LEN] = '\0';
 					if(pthread_create(&(connections[i].thread), NULL, handleConnection, connections + i)) {
 						printf("Error creating pthread\n");
-						close(conn);
 						connections[i].valid = 0;
+						close(conn);
 					} else {
 						printf("Client connected to slot %d\n", i);
-						addMessage("", i, MSG_CONN);
 					}
 					found = 1;
 				} else {
