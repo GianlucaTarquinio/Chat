@@ -24,7 +24,6 @@ typedef struct threadData {
 *                   main program
 */
 void* getInput(void* threadData) {
-	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 	ThreadData* td = (ThreadData*) threadData;
 	char msg[MSG_LEN + 1];
 	memset(msg, 0, MSG_LEN + 1);
@@ -155,13 +154,11 @@ int main(int argc, char* argv[]) {
 		if(poll(&fd, 1, -1) < 0) {
 			printf("poll failed\n");
 			close(socket_desc);
-			pthread_cancel(inputThread);
 			exit(1);
 		}
 		if(fd.revents & POLLHUP) {
 			printf(BOLD "Connection lost." NORMAL "\n");
 			close(socket_desc);
-			pthread_cancel(inputThread);
 			exit(0);
 		}
 		if(fd.revents & (POLLIN | POLLPRI)) { //Check if there is something to read
@@ -176,7 +173,6 @@ int main(int argc, char* argv[]) {
 					
 					case MSG_EXIT:
 					close(socket_desc);
-					pthread_cancel(inputThread);
 					exit(0);
 					break;
 					
@@ -197,6 +193,5 @@ int main(int argc, char* argv[]) {
 	}
 	
 	close(socket_desc);
-	pthread_cancel(inputThread);
 	exit(0);
 }

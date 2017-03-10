@@ -19,6 +19,7 @@ typedef struct connectionData {
 	char name[NAME_LEN + 1];
 } ConnectionData;
 
+int socket_desc;
 ConnectionData connections[MAX_CONNECTIONS];
 PQueue *messages;
 pthread_mutex_t queueLock;
@@ -38,6 +39,38 @@ int messageCompare(const void *a, const void *b) {
 		return -1;
 	}
 	return 0;
+}
+
+void parseCommand(char *command) {
+	int i;
+	if(strcmp(command, "exit") == 0) {
+		for(i = 0; i < MAX_CONNECTIONS; i++) {
+			pthread_mutex_lock(&(connections[i].lock));
+			if(connections[i].valid) {
+				close(connections[i].connection);
+			}
+		}
+		close(socket_desc);
+		exit(0);
+	}
+}
+
+void *getInput(void *param) {
+	char *command = NULL;
+	size_t linecap = 0;
+	ssize_t len;
+	while(1) {
+		len = getline(&command, &linecap, stdin);
+		if(command != NULL) {
+			if(len > 1) {
+				command[--len] = '\0';
+				parseCommand(command);
+			}
+			free(command);
+			command = NULL;
+		}
+	}
+	return NULL;
 }
 
 void *sendMessages(void *param) {
@@ -198,7 +231,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	
-	int socket_desc = socket(AF_INET, SOCK_STREAM, 0); //Create the socket
+	socket_desc = socket(AF_INET, SOCK_STREAM, 0); //Create the socket
 	
 	//Configure server address struct
 	struct sockaddr_in server;
@@ -218,17 +251,27 @@ int main(int argc, char *argv[]) {
 	if(listen(socket_desc, 7) == 0) {
 	} else {
 		printf("Error in listen\n");
+		close(socket_desc);
 		return 1;
 	}
 	
 	if(pthread_cond_init(&(toSend), NULL)) {
 		printf("Initialization failed\n");
+		close(socket_desc);
 		return 1;
 	}
 	
 	pthread_t sendThread;
 	if(pthread_create(&sendThread, NULL, sendMessages, NULL)) {
 		printf("Error creating pthread\n");
+		close(socket_desc);
+		return 1;
+	}
+	
+	pthread_t inputThread;
+	if(pthread_create(&inputThread, NULL, getInput, NULL)) {
+		printf("Error creating pthread\n");
+		close(socket_desc);
 		return 1;
 	}
 	
@@ -266,5 +309,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	
+	close(socket_desc);
 	return 0;
 }
