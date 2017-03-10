@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
 	Message incMessage;
 	struct pollfd fd;
 	fd.fd = socket_desc;
-	fd.events = POLLIN | POLLPRI | POLLHUP;
+	fd.events = POLLIN | POLLPRI | POLLHUP | POLLERR;
 	fd.revents = 0;
 	
 	//Wait for server code and send name
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
 		close(socket_desc);
 		exit(1);
 	}
-	if(fd.revents & POLLHUP) {
+	if(fd.revents & (POLLHUP | POLLERR)) {
 		printf("Validation failed\n");
 		close(socket_desc);
 		exit(1);
@@ -148,6 +148,7 @@ int main(int argc, char* argv[]) {
 	}
 	
 	printf(BOLD "Connected to %s:%d\nType a message and press enter to send it\nType \"/quit\" to disconnect" NORMAL "\n\n", ip, port);
+	int bytesRead;
 	while(1) {
 		//Read from server if there is a message to read
 		fd.revents = 0;
@@ -156,15 +157,16 @@ int main(int argc, char* argv[]) {
 			close(socket_desc);
 			exit(1);
 		}
-		if(fd.revents & POLLHUP) {
+		if(fd.revents & (POLLERR | POLLHUP)) {
 			printf(BOLD "Connection lost." NORMAL "\n");
 			close(socket_desc);
 			exit(0);
 		}
 		if(fd.revents & (POLLIN | POLLPRI)) { //Check if there is something to read
-			if(recv(socket_desc, recvBuf, MSG_BUF_LEN, 0) < 0) {
+			bytesRead = recv(socket_desc, recvBuf, MSG_BUF_LEN, 0);
+			if(bytesRead < 0) {
 				printf("recv failed\n");
-			} else {
+			} else if(bytesRead > 0) {
 				unserializeMessage(&incMessage, recvBuf);
 				switch(incMessage.type) {
 					case MSG_NORMAL:

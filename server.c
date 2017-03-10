@@ -131,7 +131,7 @@ void *handleConnection(void *param) {
 	memset(writeBuff, '\0', MSG_LEN + 1);
 	struct pollfd fd;
 	fd.fd = me->connection;
-	fd.events = POLLIN | POLLPRI | POLLHUP;
+	fd.events = POLLIN | POLLPRI | POLLHUP | POLLERR;
 	fd.revents = 0;
 	int bytesRead;
 	
@@ -153,7 +153,7 @@ void *handleConnection(void *param) {
 		pthread_mutex_unlock(&(me->lock));
 		return NULL;
 	}
-	if(fd.revents & POLLHUP) {
+	if(fd.revents & (POLLHUP | POLLERR)) {
 		printf("Could not get name from user %d\n", me->i);
 		pthread_mutex_lock(&(me->lock));
 		me->valid = 0;
@@ -187,7 +187,7 @@ void *handleConnection(void *param) {
 		if(poll(&fd, 1, -1) < 0) {
 			printf("poll failed\n");
 		} else {
-			if(fd.revents & POLLHUP) { //Check if socket is closed
+			if(fd.revents & (POLLHUP | POLLERR)) { //Check if socket is closed
 				printf("Client disconnected from slot %d\n", me->i);
 				addMessage("", me->i, MSG_DCONN);
 				close(me->connection);
@@ -200,7 +200,7 @@ void *handleConnection(void *param) {
 				bytesRead = recv(me->connection, readBuff, MSG_LEN, 0);
 				if(bytesRead < 0) {
 					printf("recv failed\n");
-				} else {
+				} else if(bytesRead > 0) {
 					readBuff[bytesRead] = '\0';
 					addMessage(readBuff, me->i, MSG_NORMAL);
 				}

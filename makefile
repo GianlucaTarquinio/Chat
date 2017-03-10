@@ -1,7 +1,7 @@
 all: server client
 
 server: server.o chat.o pqueue.o
-	gcc server.o chat.o pqueue.o -o server
+	gcc server.o chat.o pqueue.o -o server -lpthread
 
 client: client.o chat.o
 	gcc client.o chat.o -o client -lpthread
