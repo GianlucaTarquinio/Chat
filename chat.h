@@ -4,11 +4,14 @@
 #include <sys/time.h>
 #include <stdint.h>
 
-#define START_CODE 17
+//Configuration constants
 #define MAX_CONNECTIONS 80
 #define MSG_LEN 255
 #define NAME_LEN 50
 #define MSG_BUF_LEN MSG_LEN + NAME_LEN + 14
+
+//Connection codes
+#define START_CODE 17
 
 //message types
 #define MSG_NORMAL 0
