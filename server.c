@@ -296,7 +296,13 @@ void *sendMessages(void *param) {
 				if(i != m->senderNum) {
 					pthread_mutex_lock(&(connections[i].lock));
 					if(connections[i].valid) {
+						if(m->type == MSG_NORMAL) {
+							printf("%s(%d): %s\n", m->name, m->senderNum, m->content);
+						}
 						if(send(connections[i].connection, sendBuf, numBytes, 0) < 0) {
+							if(m->type == MSG_NORMAL) {
+								printf("^ "); //to point out that it was the message that just printed that didn't send
+							}
 							printf("Send failed\n");
 						}
 					}
@@ -316,6 +322,9 @@ int addMessage(char *buf, uint32_t sender, uint32_t type) {
 	int result;
 	gettimeofday(&t, NULL);
 	Message *m = (Message *) malloc(sizeof(Message));
+	if(!m) {
+		return 1;
+	}
 	m->senderNum = sender;
 	m->type = type;
 	strncpy(m->content, buf, MSG_LEN);
