@@ -174,6 +174,7 @@ int main(int argc, char* argv[]) {
 					break;
 					
 					case MSG_EXIT:
+					printf(BOLD "Kicked from server." NORMAL "\n");
 					close(socket_desc);
 					exit(0);
 					break;

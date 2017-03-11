@@ -10,7 +10,7 @@
 #include "chat.h"
 #include "pqueue.h"
 
-#define NUM_CMDS 5
+#define NUM_CMDS 8
 
 typedef struct connectionData {
 	int connection;
@@ -49,13 +49,45 @@ int messageCompare(const void *a, const void *b) {
 	return 0;
 }
 
-int cmdExit(char *args) {
-	int i;
+void kick(uint32_t i) {
+	Message m;
+	char sendBuf[MSG_BUF_LEN];
+	int numBytes;
+	m.type = MSG_EXIT;
+	strncpy(m.content, "", MSG_LEN);
+	m.content[MSG_LEN] = '\0';
+	strncpy(m.name, "", NAME_LEN);
+	m.content[NAME_LEN] = '\0';
+	numBytes = serializeMessage(&m, sendBuf);
+	pthread_mutex_lock(&(connections[i].lock));
+	if(connections[i].valid) {
+		if(send(connections[i].connection, sendBuf, numBytes, 0) < 0) {
+			printf("Send failed\n");
+		}
+	}
+	pthread_mutex_unlock(&(connections[i].lock));
+}
+
+//////////////////////////////////////////////////
+//////////////START OF COMMANDS///////////////////
+//////////////////////////////////////////////////
+
+int cmdHardexit(char *args) {
+	uint32_t i;
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
 		pthread_mutex_lock(&(connections[i].lock));
 		if(connections[i].valid) {
 			close(connections[i].connection);
 		}
+	}
+	close(socket_desc);
+	exit(0);
+}
+
+int cmdExit(char *args) {
+	uint32_t i;
+	for(i = 0; i < MAX_CONNECTIONS; i++) {
+		kick(i);
 	}
 	close(socket_desc);
 	exit(0);
@@ -70,8 +102,8 @@ int cmdSay(char *args) {
 	return 0;
 }
 
-int cmdKickall(char *args) {
-	int i;
+int cmdHardkickall(char *args) {
+	uint32_t i;
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
 		pthread_mutex_lock(&(connections[i].lock));
 		if(connections[i].valid) {
@@ -83,11 +115,20 @@ int cmdKickall(char *args) {
 	return 0;
 }
 
-int cmdKick(char *args) {
+int cmdKickall(char *args) {
+	uint32_t i;
+	for(i = 0; i < MAX_CONNECTIONS; i++) {
+		kick(i);
+	}
+	return 0;
+}
+
+int cmdHardkick(char *args) {
 	if(!args) {
 		return 1;
 	}
-	int i = atoi(args);
+	int num = atoi(args);
+	uint32_t i = (uint32_t) num;
 	if(i != 0 || strcmp("0", args) == 0) { //kick by number
 		if(i >= 0 && i < MAX_CONNECTIONS) {
 			pthread_mutex_lock(&(connections[i].lock));
@@ -112,8 +153,36 @@ int cmdKick(char *args) {
 	return 0;
 }
 
+int cmdKick(char *args) {
+	if(!args) {
+		return 1;
+	}
+	int num = atoi(args);
+	uint32_t i = (uint32_t) num;
+	if(i != 0 || strcmp("0", args) == 0) { //kick by number
+		if(i >= 0 && i < MAX_CONNECTIONS) {
+			kick(i);
+		}
+	} else { //kick by name
+		for(i = 0; i < MAX_CONNECTIONS; i++) {
+			pthread_mutex_lock(&(connections[i].lock));
+			if(connections[i].valid) {
+				if(strncmp(args, connections[i].name, NAME_LEN) == 0) {
+					pthread_mutex_unlock(&(connections[i].lock));
+					kick(i);
+				} else {
+					pthread_mutex_unlock(&(connections[i].lock));
+				}
+			} else {
+				pthread_mutex_unlock(&(connections[i].lock));
+			}
+		}
+	}
+	return 0;
+}
+
 int cmdList(char *args) {
-	int i;
+	uint32_t i;
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
 		pthread_mutex_lock(&(connections[i].lock));
 		if(connections[i].valid) {
@@ -125,6 +194,10 @@ int cmdList(char *args) {
 	}
 	return 0;
 }
+
+//////////////////////////////////////////////////
+////////////////END OF COMMANDS///////////////////
+//////////////////////////////////////////////////
 
 int parseCommand(char *command) {
 	int l = 0, r = NUM_CMDS - 1, m, i = 0, cmp;
@@ -173,11 +246,14 @@ void sortCommands() {
 }
 
 void initCommands() {
-	addCommand("exit", cmdExit);
+	addCommand("hardexit", cmdHardexit);
 	addCommand("say", cmdSay);
-	addCommand("kickall", cmdKickall);
+	addCommand("hardkickall", cmdHardkickall);
 	addCommand("list", cmdList);
+	addCommand("hardkick", cmdHardkick);
 	addCommand("kick", cmdKick);
+	addCommand("kickall", cmdKickall);
+	addCommand("exit", cmdExit);
 		
 	sortCommands();
 }
