@@ -19,9 +19,15 @@ typedef struct connectionData {
 	char name[NAME_LEN + 1];
 } ConnectionData;
 
+typedef struct command {
+	char name[CMD_LEN + 1];
+	int (*execCMD)(char *);
+} Command;
+
 int socket_desc;
 ConnectionData connections[MAX_CONNECTIONS];
 PQueue *messages;
+Command commands[NUM_CMDS];
 pthread_mutex_t queueLock;
 pthread_cond_t toSend;
 
@@ -41,30 +47,98 @@ int messageCompare(const void *a, const void *b) {
 	return 0;
 }
 
-void parseCommand(char *command) {
+int cmdExit(char *args) {
 	int i;
-	if(strcmp(command, "exit") == 0) {
-		for(i = 0; i < MAX_CONNECTIONS; i++) {
-			pthread_mutex_lock(&(connections[i].lock));
-			if(connections[i].valid) {
-				close(connections[i].connection);
-			}
+	for(i = 0; i < MAX_CONNECTIONS; i++) {
+		pthread_mutex_lock(&(connections[i].lock));
+		if(connections[i].valid) {
+			close(connections[i].connection);
 		}
-		close(socket_desc);
-		exit(0);
 	}
+	close(socket_desc);
+	exit(0);
+}
+
+int cmdSay(char *args) {
+	if(!args) {
+		printf("Usage: say <message>\n");
+		return 1;
+	}
+	addMessage(args, MAX_CONNECTIONS, MSG_SERVER);
+	return 0;
+}
+
+int cmdKickall(char *args) {
+	int i;
+	for(i = 0; i < MAX_CONNECTIONS; i++) {
+		pthread_mutex_lock(&(connections[i].lock));
+		if(connections[i].valid) {
+			close(connections[i].connection);
+			connections[i].valid = 0;
+		}
+		pthread_mutex_unlock(&(connections[i].lock));
+	}
+}
+
+int parseCommand(char *command) {
+	int l = 0, r = NUM_CMDS - 1, m, i = 0, cmp;
+	char *current = command, c;
+	i = 0;
+	while(i < CMD_LEN && (c = *current) != '\0' && c != '\n' && c != ' ') {
+		current++;
+		i++;
+	}
+	if(*current != '\0') { //there are arguments to the command
+		*current = '\0';
+		current++;
+	} else { //there are no arguments
+		current = NULL;
+	}
+	while(l <= r) {
+		m = (l + r) / 2;
+		cmp = strncmp(command, commands[m].name, CMD_LEN);
+		if(cmp > 0) {
+			l = m + 1;
+		} else if(cmp < 0) {
+			r = m - 1;
+		} else {
+			return (commands[m].execCMD)(current);
+		}
+	}
+	return -1;
+}
+
+void initCommands() {
+	int i = 0;
+	strncpy(commands[i].name, "exit", CMD_LEN);
+	commands[i].name[CMD_LEN] = '\0';
+	commands[i].execCMD = cmdExit;
+	i++;
+	
+	strncpy(commands[i].name, "kickall", CMD_LEN);
+	commands[i].name[CMD_LEN] = '\0';
+	commands[i].execCMD = cmdKickall;
+	i++;
+	
+	strncpy(commands[i].name, "say", CMD_LEN);
+	commands[i].name[CMD_LEN] = '\0';
+	commands[i].execCMD = cmdSay;
 }
 
 void *getInput(void *param) {
 	char *command = NULL;
 	size_t linecap = 0;
 	ssize_t len;
+	int result;
 	while(1) {
 		len = getline(&command, &linecap, stdin);
 		if(command != NULL) {
 			if(len > 1) {
 				command[--len] = '\0';
-				parseCommand(command);
+				result = parseCommand(command);
+				if(result < 0) {
+					printf("Command not found\n");
+				}
 			}
 			free(command);
 			command = NULL;
@@ -260,6 +334,8 @@ int main(int argc, char *argv[]) {
 		close(socket_desc);
 		return 1;
 	}
+	
+	initCommands();
 	
 	pthread_t sendThread;
 	if(pthread_create(&sendThread, NULL, sendMessages, NULL)) {

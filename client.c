@@ -186,6 +186,10 @@ int main(int argc, char* argv[]) {
 					printf(BOLD "%s disconnected." NORMAL "\n", incMessage.name);
 					break;
 					
+					case MSG_SERVER:
+					printf(BOLD "%s" NORMAL "\n", incMessage.content);
+					break;
+					
 					default:
 					//printf("Recieved unrecognized message type: %ld\n, (long) incMessage.type);
 					break;
