@@ -10,6 +10,8 @@
 #include "chat.h"
 #include "pqueue.h"
 
+#define NUM_CMDS 5
+
 typedef struct connectionData {
 	int connection;
 	pthread_mutex_t lock;
@@ -78,6 +80,50 @@ int cmdKickall(char *args) {
 		}
 		pthread_mutex_unlock(&(connections[i].lock));
 	}
+	return 0;
+}
+
+int cmdKick(char *args) {
+	if(!args) {
+		return 1;
+	}
+	int i = atoi(args);
+	if(i != 0 || strcmp("0", args) == 0) { //kick by number
+		if(i >= 0 && i < MAX_CONNECTIONS) {
+			pthread_mutex_lock(&(connections[i].lock));
+			if(connections[i].valid) {
+				close(connections[i].connection);
+				connections[i].valid = 0;
+			}
+			pthread_mutex_unlock(&(connections[i].lock));
+		}
+	} else { //kick by name
+		for(i = 0; i < MAX_CONNECTIONS; i++) {
+			pthread_mutex_lock(&(connections[i].lock));
+			if(connections[i].valid) {
+				if(strncmp(args, connections[i].name, NAME_LEN) == 0) {
+					close(connections[i].connection);
+					connections[i].valid = 0;
+				}
+			}
+			pthread_mutex_unlock(&(connections[i].lock));
+		}
+	}
+	return 0;
+}
+
+int cmdList(char *args) {
+	int i;
+	for(i = 0; i < MAX_CONNECTIONS; i++) {
+		pthread_mutex_lock(&(connections[i].lock));
+		if(connections[i].valid) {
+			if(!args || strncmp(args, connections[i].name, NAME_LEN) == 0) {
+				printf("%ld: %s\n", (long) connections[i].i, connections[i].name);
+			}
+		}
+		pthread_mutex_unlock(&(connections[i].lock));
+	}
+	return 0;
 }
 
 int parseCommand(char *command) {
@@ -108,21 +154,32 @@ int parseCommand(char *command) {
 	return -1;
 }
 
+void addCommand(char *name, int (*execCMD)(char *)) {
+	static int cmdCount = 0;
+	if(cmdCount < NUM_CMDS) {
+		strncpy(commands[cmdCount].name, name, CMD_LEN);
+		commands[cmdCount].name[CMD_LEN] = '\0';
+		commands[cmdCount].execCMD = execCMD;
+		cmdCount++;
+	}
+}
+
+int compareCommands(const void *a, const void *b) {
+	return strncmp(((Command *) a)->name, ((Command *) b)->name, CMD_LEN);
+}
+
+void sortCommands() {
+	qsort(&commands, NUM_CMDS, sizeof(Command), compareCommands);
+}
+
 void initCommands() {
-	int i = 0;
-	strncpy(commands[i].name, "exit", CMD_LEN);
-	commands[i].name[CMD_LEN] = '\0';
-	commands[i].execCMD = cmdExit;
-	i++;
-	
-	strncpy(commands[i].name, "kickall", CMD_LEN);
-	commands[i].name[CMD_LEN] = '\0';
-	commands[i].execCMD = cmdKickall;
-	i++;
-	
-	strncpy(commands[i].name, "say", CMD_LEN);
-	commands[i].name[CMD_LEN] = '\0';
-	commands[i].execCMD = cmdSay;
+	addCommand("exit", cmdExit);
+	addCommand("say", cmdSay);
+	addCommand("kickall", cmdKickall);
+	addCommand("list", cmdList);
+	addCommand("kick", cmdKick);
+		
+	sortCommands();
 }
 
 void *getInput(void *param) {
@@ -139,6 +196,7 @@ void *getInput(void *param) {
 				if(result < 0) {
 					printf("Command not found\n");
 				}
+				printf("\n");
 			}
 			free(command);
 			command = NULL;

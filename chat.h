@@ -9,7 +9,6 @@
 #define MSG_LEN 255
 #define NAME_LEN 50
 #define CMD_LEN 30
-#define NUM_CMDS 3
 #define MSG_BUF_LEN MSG_LEN + NAME_LEN + 14
 
 //Connection codes
