@@ -36,5 +36,6 @@ typedef struct message {
 void printBuf(char *buf);
 int serializeMessage(Message *m, char *buf);
 int unserializeMessage(Message *m, char *buf);
+int getTimeString(struct timeval *t, char *buf, int len);
 
 #endif

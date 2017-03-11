@@ -47,3 +47,21 @@ int unserializeMessage(Message *m, char *buf) {
 	m->content[messageLen] = '\0';
 	return 14 + nameLen + messageLen;
 }
+
+int getTimeString(struct timeval *t, char* buf, int len) {
+	time_t current;
+	struct tm *currentTm;
+	int i;
+	current = t->tv_sec;
+	currentTm = localtime(&current);
+	if(len < 8) {
+		return 1;
+	}
+	i = strftime(buf, len - 7, "%m-%d-%Y %H:%M:%S", currentTm);
+	if(i > 0) {
+		snprintf(buf + i, 7, ".%06ld", (long) t->tv_usec);
+		buf[len - 1] = '\0';
+		return 0;
+	}
+	return 1;
+}

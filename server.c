@@ -284,25 +284,26 @@ void *getInput(void *param) {
 void *sendMessages(void *param) {
 	Message *m;
 	uint32_t i;
-	char sendBuf[MSG_BUF_LEN];
-	int numBytes;
+	int numBytes, dateBufLen = 100;
+	char sendBuf[MSG_BUF_LEN], dateBuf[dateBufLen];
 	while(1) {
 		pthread_mutex_lock(&queueLock);
 		while(messages != NULL) {
 			pthread_mutex_unlock(&queueLock);
 			m = (Message *) pqPop(&messages, &queueLock);
 			numBytes = serializeMessage(m, sendBuf);
+			if(m->type == MSG_NORMAL) {
+				if(getTimeString(&(m->date), dateBuf, dateBufLen)) {
+					strncpy(dateBuf, "?", dateBufLen - 1);
+					dateBuf[dateBufLen - 1] = '\0';
+				}
+				printf("[%s] %s(%d): %s\n", dateBuf, m->name, m->senderNum, m->content);
+			}
 			for(i = 0; i < MAX_CONNECTIONS; i++) {
 				if(i != m->senderNum) {
 					pthread_mutex_lock(&(connections[i].lock));
 					if(connections[i].valid) {
-						if(m->type == MSG_NORMAL) {
-							printf("%s(%d): %s\n", m->name, m->senderNum, m->content);
-						}
 						if(send(connections[i].connection, sendBuf, numBytes, 0) < 0) {
-							if(m->type == MSG_NORMAL) {
-								printf("^ "); //to point out that it was the message that just printed that didn't send
-							}
 							printf("Send failed\n");
 						}
 					}
