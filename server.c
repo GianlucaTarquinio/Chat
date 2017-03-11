@@ -440,7 +440,8 @@ int main(int argc, char *argv[]) {
 	}
 	
 	socket_desc = socket(AF_INET, SOCK_STREAM, 0); //Create the socket
-	
+	int t = 1;
+	setsockopt(socket_desc,SOL_SOCKET,SO_REUSEADDR,&t,sizeof(int));
 	//Configure server address struct
 	struct sockaddr_in server;
 	server.sin_family = AF_INET;
