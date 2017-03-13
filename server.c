@@ -10,7 +10,7 @@
 #include "chat.h"
 #include "pqueue.h"
 
-#define NUM_CMDS 8
+#define NUM_CMDS 9
 
 typedef struct connectionData {
 	int connection;
@@ -123,13 +123,14 @@ int cmdHardkickall(char *args) {
 int cmdKickall(char *args) {
 	uint32_t i;
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
-		kick(i, NULL);
+		kick(i, args);
 	}
 	return 0;
 }
 
 int cmdHardkick(char *args) {
-	if(!args) {
+	if(!args || strncmp(args, "", 2) == 0) {
+		printf("Usage: kick <name or number>\n");
 		return 1;
 	}
 	int num = atoi(args);
@@ -159,14 +160,26 @@ int cmdHardkick(char *args) {
 }
 
 int cmdKick(char *args) {
-	if(!args) {
+	if(!args || strncmp(args, "", 2) == 0) {
+		printf("Usage: kick <name or number> [reason]\n");
 		return 1;
+	}
+	char *reason = args;
+	while(*reason != ' ' && *reason != '\0') {
+		reason++;
+	}
+	if(*reason == ' ') {
+		*reason = '\0';
+		reason++;
+	}
+	if(*reason == '\0') {
+		reason = NULL;
 	}
 	int num = atoi(args);
 	uint32_t i = (uint32_t) num;
 	if(i != 0 || strcmp("0", args) == 0) { //kick by number
 		if(i >= 0 && i < MAX_CONNECTIONS) {
-			kick(i, NULL);
+			kick(i, reason);
 		}
 	} else { //kick by name
 		for(i = 0; i < MAX_CONNECTIONS; i++) {
@@ -174,7 +187,7 @@ int cmdKick(char *args) {
 			if(connections[i].valid) {
 				if(strncmp(args, connections[i].name, NAME_LEN) == 0) {
 					pthread_mutex_unlock(&(connections[i].lock));
-					kick(i, NULL);
+					kick(i, reason);
 				} else {
 					pthread_mutex_unlock(&(connections[i].lock));
 				}
@@ -196,6 +209,15 @@ int cmdList(char *args) {
 			}
 		}
 		pthread_mutex_unlock(&(connections[i].lock));
+	}
+	return 0;
+}
+
+int cmdHelp(char *args) {
+	int i;
+	printf("Available commands:\n");
+	for(i = 0; i < NUM_CMDS; i++) {
+		printf("%s\n", commands[i].name);
 	}
 	return 0;
 }
@@ -259,6 +281,7 @@ void initCommands() {
 	addCommand("kick", cmdKick);
 	addCommand("kickall", cmdKickall);
 	addCommand("exit", cmdExit);
+	addCommand("help", cmdHelp);
 		
 	sortCommands();
 }
@@ -277,7 +300,6 @@ void *getInput(void *param) {
 				if(result < 0) {
 					printf("Command not found\n");
 				}
-				printf("\n");
 			}
 			free(command);
 			command = NULL;
