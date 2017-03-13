@@ -28,7 +28,6 @@ void* getInput(void* threadData) {
 	char msg[MSG_LEN + 1];
 	memset(msg, 0, MSG_LEN + 1);
 	char *pos;
-	char c;
 	while(1) {
 		fgets(msg, MSG_LEN + 1, stdin);
 		if(strlen(msg) > 1) {
@@ -43,6 +42,7 @@ void* getInput(void* threadData) {
 			if(send(td->socket, msg, strnlen(msg, MSG_LEN), 0) < 0) {
 				printf("Send failed\n"); //Send failed
 			}
+			usleep(1000); //trying to send over the same connection too frequently causes errors
 		}
 	}
 	exit(1);
@@ -174,7 +174,12 @@ int main(int argc, char* argv[]) {
 					break;
 					
 					case MSG_EXIT:
-					printf(BOLD "Kicked from server." NORMAL "\n");
+					printf(BOLD "Kicked from server." NORMAL);
+					if(strncmp("", incMessage.content, MSG_LEN) == 0) {
+						printf("\n");
+					} else {
+						printf(" (Reason: %s)\n", incMessage.content);
+					}
 					close(socket_desc);
 					exit(0);
 					break;
@@ -192,7 +197,7 @@ int main(int argc, char* argv[]) {
 					break;
 					
 					default:
-					//printf("Recieved unrecognized message type: %ld\n, (long) incMessage.type);
+					//printf("Recieved unrecognized message type: %ld\n", (long) incMessage.type);
 					break;
 				}
 			}

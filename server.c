@@ -49,12 +49,17 @@ int messageCompare(const void *a, const void *b) {
 	return 0;
 }
 
-void kick(uint32_t i) {
+//add reason parameter
+void kick(uint32_t i, char *reason) {
 	Message m;
 	char sendBuf[MSG_BUF_LEN];
 	int numBytes;
 	m.type = MSG_EXIT;
-	strncpy(m.content, "", MSG_LEN);
+	if(!reason) {
+		strncpy(m.content, "", MSG_LEN);
+	} else {
+		strncpy(m.content, reason, MSG_LEN);
+	}
 	m.content[MSG_LEN] = '\0';
 	strncpy(m.name, "", NAME_LEN);
 	m.content[NAME_LEN] = '\0';
@@ -87,7 +92,7 @@ int cmdHardexit(char *args) {
 int cmdExit(char *args) {
 	uint32_t i;
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
-		kick(i);
+		kick(i, "Server shutdown");
 	}
 	close(socket_desc);
 	exit(0);
@@ -118,7 +123,7 @@ int cmdHardkickall(char *args) {
 int cmdKickall(char *args) {
 	uint32_t i;
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
-		kick(i);
+		kick(i, NULL);
 	}
 	return 0;
 }
@@ -161,7 +166,7 @@ int cmdKick(char *args) {
 	uint32_t i = (uint32_t) num;
 	if(i != 0 || strcmp("0", args) == 0) { //kick by number
 		if(i >= 0 && i < MAX_CONNECTIONS) {
-			kick(i);
+			kick(i, NULL);
 		}
 	} else { //kick by name
 		for(i = 0; i < MAX_CONNECTIONS; i++) {
@@ -169,7 +174,7 @@ int cmdKick(char *args) {
 			if(connections[i].valid) {
 				if(strncmp(args, connections[i].name, NAME_LEN) == 0) {
 					pthread_mutex_unlock(&(connections[i].lock));
-					kick(i);
+					kick(i, NULL);
 				} else {
 					pthread_mutex_unlock(&(connections[i].lock));
 				}
@@ -311,6 +316,7 @@ void *sendMessages(void *param) {
 				}
 			}
 			free(m);
+			usleep(1000); //trying to send over the same connection too frequently causes errors
 			pthread_mutex_lock(&queueLock);
 		}
 		pthread_cond_wait(&toSend, &queueLock);
