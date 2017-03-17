@@ -32,6 +32,7 @@ int getAddressList(char ***addrs) {
 	}
 	if(!*addrs) {
 		printf("Error: malloc failed.\n");
+		fclose(f);
 		return -1;
 	}
 	rewind(f);
