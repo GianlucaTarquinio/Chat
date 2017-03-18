@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 #include "chat.h"
 

@@ -62,8 +62,9 @@ char *getName() {
 	if(len > 1) {
 		line[len - 1] = '\0';
 		ret = (char *) malloc(len);
+		strncpy(ret, line, len);
 		free(line);
-		return line;
+		return ret;
 	} else {
 		free(line);
 		return NULL;
@@ -101,6 +102,7 @@ int main() {
 		printf("Invalid name\n");
 		return 1;
 	}
+	printf("NAME: %s\n", name);
 	execl("./client", "./client", addrs[choice-1], name, NULL);
 	return 0;
 }

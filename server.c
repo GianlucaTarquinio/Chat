@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
@@ -47,6 +48,26 @@ int messageCompare(const void *a, const void *b) {
 		return -1;
 	}
 	return 0;
+}
+
+int addMessage(char *buf, uint32_t sender, uint32_t type) {
+	struct timeval t;
+	int result;
+	gettimeofday(&t, NULL);
+	Message *m = (Message *) malloc(sizeof(Message));
+	if(!m) {
+		return 1;
+	}
+	m->senderNum = sender;
+	m->type = type;
+	strncpy(m->content, buf, MSG_LEN);
+	*(m->content + MSG_LEN) = '\0';
+	m->date = t;
+	strncpy(m->name, connections[sender].name, NAME_LEN);
+	*(m->name + NAME_LEN) = '\0';
+	result = pqPush(&messages, m, messageCompare, &queueLock);
+	pthread_cond_signal(&toSend);
+	return result;
 }
 
 //add reason parameter
@@ -344,26 +365,6 @@ void *sendMessages(void *param) {
 		pthread_cond_wait(&toSend, &queueLock);
 		pthread_mutex_unlock(&queueLock);
 	}
-}
-
-int addMessage(char *buf, uint32_t sender, uint32_t type) {
-	struct timeval t;
-	int result;
-	gettimeofday(&t, NULL);
-	Message *m = (Message *) malloc(sizeof(Message));
-	if(!m) {
-		return 1;
-	}
-	m->senderNum = sender;
-	m->type = type;
-	strncpy(m->content, buf, MSG_LEN);
-	*(m->content + MSG_LEN) = '\0';
-	m->date = t;
-	strncpy(m->name, connections[sender].name, NAME_LEN);
-	*(m->name + NAME_LEN) = '\0';
-	result = pqPush(&messages, m, messageCompare, &queueLock);
-	pthread_cond_signal(&toSend);
-	return result;
 }
 
 /** Handle a connection with a client
