@@ -7,12 +7,17 @@
 
 #define MAX_ADDR_SIZE 50
 
-int getAddressList(char ***addrs) {
-	char *line = NULL;
+int getAddressList(char ***addrs, char *path) {
+	char *line = NULL, *saveName = "save.txt";
 	size_t linecap = MAX_ADDR_SIZE + 1;
 	ssize_t len;
-	int count = 0, i = 0;
-	FILE *f = fopen("save.txt", "r");
+	size_t count = 0, i;
+	size_t pathLen = strlen(path);
+	char *savePath = (char *) malloc(pathLen + strlen(saveName) + 1);
+	strcpy(savePath, path);
+	strcpy(savePath + pathLen, saveName);
+	FILE *f = fopen(savePath, "r");
+	free(savePath);
 	if(!f) {
 		printf("Error: save file not found.\n");
 		return -1;
@@ -57,7 +62,7 @@ char *getName() {
 	size_t linecap = 0;
 	ssize_t len;
 	while (getchar() != '\n');
-	printf("Name: ");
+	printf(BOLD "Name: " NORMAL);
 	len = getline(&line, &linecap, stdin);
 	if(len > 1) {
 		line[len - 1] = '\0';
@@ -73,11 +78,11 @@ char *getName() {
 
 int getOption(char **addrs, int count) {
 	int i;
-	printf(BOLD "Servers IPs:" NORMAL "\n");
+	printf(BOLD "\nServers IPs:" NORMAL "\n");
 	for(i = 0; i < count; i++) {
 		printf(BOLD "%d: " NORMAL "%s\n", i + 1, addrs[i]);
 	}
-	printf("Enter the number of the server you want to connect to: ");
+	printf(BOLD "\nEnter the number of the server you want to connect to: " NORMAL);
 	scanf("%d", &i);
 	if(i < 1 || i > count) {
 		return 0;
@@ -86,9 +91,25 @@ int getOption(char **addrs, int count) {
 	}
 }
 
-int main() {
-	char **addrs, *name;
- 	int count = getAddressList(&addrs), choice;
+char *getDirectoryPath(char *firstArg) {
+	int len = strlen(firstArg), i;
+	char *path = (char *) malloc(len + 1);
+	strcpy(path, firstArg);
+	i = len - 1;
+	while(i > 0 && path[i] != '/') {
+		i--;
+	}
+	if(i > 0) {
+		i++;
+	}
+	path[i] = '\0';
+	return path;
+}
+
+int main(int argc, char *argv[]) {
+	char **addrs, *name, *path;
+	path = getDirectoryPath(argv[0]);
+ 	int count = getAddressList(&addrs, path), choice;
 	if(count < 0) {
 		return 1;
 	}
@@ -102,7 +123,12 @@ int main() {
 		printf("Invalid name\n");
 		return 1;
 	}
-	printf("NAME: %s\n", name);
-	execl("./client", "./client", addrs[choice-1], name, NULL);
+	
+	size_t pathLen = strlen(path);
+	char *clientName = "client";
+	char *callPath = (char *) malloc(pathLen + strlen(clientName) + 1);
+	strcpy(callPath, path);
+	strcpy(callPath + pathLen, clientName);
+	execl(callPath, callPath, addrs[choice-1], name, NULL);
 	return 0;
 }

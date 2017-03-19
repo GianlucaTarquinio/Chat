@@ -83,7 +83,7 @@ void kick(uint32_t i, char *reason) {
 	}
 	m.content[MSG_LEN] = '\0';
 	strncpy(m.name, "", NAME_LEN);
-	m.content[NAME_LEN] = '\0';
+	m.name[NAME_LEN] = '\0';
 	numBytes = serializeMessage(&m, sendBuf);
 	pthread_mutex_lock(&(connections[i].lock));
 	if(connections[i].valid) {
