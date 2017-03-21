@@ -25,6 +25,7 @@ typedef struct connectionData {
 typedef struct command {
 	char name[CMD_LEN + 1];
 	char usage[CMD_USAGE_LEN + 1];
+	char desc[CMD_DESC_LEN + 1];
 	int (*execCMD)(char *);
 } Command;
 
@@ -234,10 +235,11 @@ int cmdList(char *args) {
 
 int cmdHelp(char *args) {
 	int i;
-	printf("Available commands:\n");
+	printf("\n" BOLD "Available commands:" NORMAL "\n");
 	for(i = 0; i < NUM_CMDS; i++) {
-		printf("%s %s\n", commands[i].name, commands[i].usage);
+		printf(BOLD "%s %s" NORMAL "  %s\n", commands[i].name, commands[i].usage, commands[i].desc);
 	}
+	printf("\n");
 	return 0;
 }
 
@@ -278,7 +280,7 @@ int parseCommand(char *command) {
 	return -2;
 }
 
-void addCommand(char *name, char *usage, int (*execCMD)(char *)) {
+void addCommand(char *name, int (*execCMD)(char *), char *usage, char *desc) {
 	static int cmdCount = 0;
 	if(cmdCount < NUM_CMDS) {
 		strncpy(commands[cmdCount].name, name, CMD_LEN);
@@ -289,6 +291,12 @@ void addCommand(char *name, char *usage, int (*execCMD)(char *)) {
 		} else {
 			commands[cmdCount].usage[0] = '\0';
 		}
+		if(desc) {
+			strncpy(commands[cmdCount].desc, desc, CMD_DESC_LEN);
+		} else {
+			strncpy(commands[cmdCount].desc, "No description available.", CMD_DESC_LEN);
+		}
+		commands[cmdCount].desc[CMD_DESC_LEN] = '\0';
 		commands[cmdCount].execCMD = execCMD;
 		cmdCount++;
 	}
@@ -303,15 +311,15 @@ void sortCommands() {
 }
 
 void initCommands() {
-	addCommand("hardexit", NULL, cmdHardexit);
-	addCommand("say", "<message>", cmdSay);
-	addCommand("hardkickall", NULL, cmdHardkickall);
-	addCommand("list", "[name]", cmdList);
-	addCommand("hardkick", "<name | number>", cmdHardkick);
-	addCommand("kick", "<name | number>", cmdKick);
-	addCommand("kickall", NULL, cmdKickall);
-	addCommand("exit", NULL, cmdExit);
-	addCommand("help", NULL, cmdHelp);
+	addCommand("hardexit", cmdHardexit, NULL, "Forcefully severs all connections and shuts down the server.");
+	addCommand("say", cmdSay, "<message>", "Prints a message to all clients connected to the server.");
+	addCommand("hardkickall", cmdHardkickall, NULL, "Forcefull severs all connections.");
+	addCommand("list", cmdList, "[name]", "Lists the name and number of all connections. If a name is specified, only connections with that name will be listed.");
+	addCommand("hardkick", cmdHardkick, "<name | number>", "Forcefully severs the connection with a certain name or number.");
+	addCommand("kick", cmdKick, "<name | number> [reason]", "Disconnects the client connected with a certain name or number. A reason for the kick can be specified.");
+	addCommand("kickall", cmdKickall, "[reason]", "Disconnects all clients connected to the server. A reason for the kick can be specified.");
+	addCommand("exit", cmdExit, NULL, "Disconnects all clients and shuts down the server.");
+	addCommand("help", cmdHelp, NULL, "Lists all commands, their usages, and their descriptions.");
 		
 	sortCommands();
 }

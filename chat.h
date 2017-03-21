@@ -10,6 +10,7 @@
 #define NAME_LEN 50
 #define CMD_LEN 50
 #define CMD_USAGE_LEN 200
+#define CMD_DESC_LEN 200
 
 #define MSG_BUF_LEN MSG_LEN + NAME_LEN + 14
 
