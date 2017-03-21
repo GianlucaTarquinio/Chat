@@ -24,6 +24,7 @@ typedef struct connectionData {
 
 typedef struct command {
 	char name[CMD_LEN + 1];
+	char usage[CMD_USAGE_LEN + 1];
 	int (*execCMD)(char *);
 } Command;
 
@@ -121,8 +122,7 @@ int cmdExit(char *args) {
 
 int cmdSay(char *args) {
 	if(!args) {
-		printf("Usage: say <message>\n");
-		return 1;
+		return -1;
 	}
 	addMessage(args, MAX_CONNECTIONS, MSG_SERVER);
 	return 0;
@@ -151,8 +151,7 @@ int cmdKickall(char *args) {
 
 int cmdHardkick(char *args) {
 	if(!args || strncmp(args, "", 2) == 0) {
-		printf("Usage: kick <name or number>\n");
-		return 1;
+		return -1;
 	}
 	int num = atoi(args);
 	uint32_t i = (uint32_t) num;
@@ -182,8 +181,7 @@ int cmdHardkick(char *args) {
 
 int cmdKick(char *args) {
 	if(!args || strncmp(args, "", 2) == 0) {
-		printf("Usage: kick <name or number> [reason]\n");
-		return 1;
+		return -1;
 	}
 	char *reason = args;
 	while(*reason != ' ' && *reason != '\0') {
@@ -238,7 +236,7 @@ int cmdHelp(char *args) {
 	int i;
 	printf("Available commands:\n");
 	for(i = 0; i < NUM_CMDS; i++) {
-		printf("%s\n", commands[i].name);
+		printf("%s %s\n", commands[i].name, commands[i].usage);
 	}
 	return 0;
 }
@@ -248,7 +246,7 @@ int cmdHelp(char *args) {
 //////////////////////////////////////////////////
 
 int parseCommand(char *command) {
-	int l = 0, r = NUM_CMDS - 1, m, i = 0, cmp;
+	int l = 0, r = NUM_CMDS - 1, m, i = 0, cmp, result;
 	char *current = command, c;
 	i = 0;
 	while(i < CMD_LEN && (c = *current) != '\0' && c != '\n' && c != ' ') {
@@ -269,17 +267,28 @@ int parseCommand(char *command) {
 		} else if(cmp < 0) {
 			r = m - 1;
 		} else {
-			return (commands[m].execCMD)(current);
+			result = (commands[m].execCMD)(current);
+			if(result == -1) {
+				printf("Usage: %s %s\n", command, commands[m].usage);
+			}
+			return result;
 		}
 	}
-	return -1;
+	printf("Command not found\n");
+	return -2;
 }
 
-void addCommand(char *name, int (*execCMD)(char *)) {
+void addCommand(char *name, char *usage, int (*execCMD)(char *)) {
 	static int cmdCount = 0;
 	if(cmdCount < NUM_CMDS) {
 		strncpy(commands[cmdCount].name, name, CMD_LEN);
 		commands[cmdCount].name[CMD_LEN] = '\0';
+		if(usage) {
+			strncpy(commands[cmdCount].usage, usage, CMD_USAGE_LEN);
+			commands[cmdCount].usage[CMD_USAGE_LEN] = '\0';
+		} else {
+			commands[cmdCount].usage[0] = '\0';
+		}
 		commands[cmdCount].execCMD = execCMD;
 		cmdCount++;
 	}
@@ -294,15 +303,15 @@ void sortCommands() {
 }
 
 void initCommands() {
-	addCommand("hardexit", cmdHardexit);
-	addCommand("say", cmdSay);
-	addCommand("hardkickall", cmdHardkickall);
-	addCommand("list", cmdList);
-	addCommand("hardkick", cmdHardkick);
-	addCommand("kick", cmdKick);
-	addCommand("kickall", cmdKickall);
-	addCommand("exit", cmdExit);
-	addCommand("help", cmdHelp);
+	addCommand("hardexit", NULL, cmdHardexit);
+	addCommand("say", "<message>", cmdSay);
+	addCommand("hardkickall", NULL, cmdHardkickall);
+	addCommand("list", "[name]", cmdList);
+	addCommand("hardkick", "<name | number>", cmdHardkick);
+	addCommand("kick", "<name | number>", cmdKick);
+	addCommand("kickall", NULL, cmdKickall);
+	addCommand("exit", NULL, cmdExit);
+	addCommand("help", NULL, cmdHelp);
 		
 	sortCommands();
 }
@@ -317,10 +326,7 @@ void *getInput(void *param) {
 		if(command != NULL) {
 			if(len > 1) {
 				command[--len] = '\0';
-				result = parseCommand(command);
-				if(result < 0) {
-					printf("Command not found\n");
-				}
+				parseCommand(command);
 			}
 			free(command);
 			command = NULL;
