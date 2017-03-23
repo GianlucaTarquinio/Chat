@@ -157,7 +157,7 @@ int cmdHardkick(char *args) {
 	int num = atoi(args);
 	uint32_t i = (uint32_t) num;
 	if(i != 0 || strcmp("0", args) == 0) { //kick by number
-		if(i >= 0 && i < MAX_CONNECTIONS) {
+		if(i < MAX_CONNECTIONS) {
 			pthread_mutex_lock(&(connections[i].lock));
 			if(connections[i].valid) {
 				close(connections[i].connection);
@@ -198,7 +198,7 @@ int cmdKick(char *args) {
 	int num = atoi(args);
 	uint32_t i = (uint32_t) num;
 	if(i != 0 || strcmp("0", args) == 0) { //kick by number
-		if(i >= 0 && i < MAX_CONNECTIONS) {
+		if(i < MAX_CONNECTIONS) {
 			kick(i, reason);
 		}
 	} else { //kick by name
