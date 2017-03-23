@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 	}
 	choice = getOption(addrs, count);
 	if(choice == 0) {
-		printf("Invalid Option\n");
+		printf("Invalid option\n");
 		return 1;
 	}
 	name = getName();
