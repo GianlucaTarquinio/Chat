@@ -40,5 +40,10 @@ void printBuf(char *buf);
 int serializeMessage(Message *m, char *buf);
 int unserializeMessage(Message *m, char *buf);
 int getTimeString(struct timeval *t, char *buf, int len);
+int cleanPrint(const char *restrict format, ...) 
+#ifdef __GNUC__
+   	 __attribute__ (( format( printf, 1, 2 ) ))
+#endif
+;
 
 #endif

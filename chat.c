@@ -1,7 +1,9 @@
-#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <arpa/inet.h>
+#include <stdarg.h>
 
 #include "chat.h"
 
@@ -66,4 +68,22 @@ int getTimeString(struct timeval *t, char* buf, int len) {
 		return 0;
 	}
 	return 1;
+}
+
+int cleanPrint(const char *restrict format, ...) {
+	int retval, size;
+	va_list args;
+	char *buf;
+	va_start(args, format);
+	size = vsnprintf(NULL, 0, format, args);
+	va_end(args);
+	buf = (char *) malloc(size + 1);
+	if(!buf) {
+		return -1;
+	}
+	va_start(args, format);
+	retval = vsprintf(buf, format, args);
+	va_end(args);
+	printf("%s", buf); //rather than printf, this will call a function that does the readline magic
+	return retval;
 }
