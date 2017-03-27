@@ -24,12 +24,12 @@ chat.o: chat.c chat.h
 pqueue.o: pqueue.c pqueue.h
 	gcc -c pqueue.c
 	
-mac-client: all
+mac-client: mac_app_structure/GChatClient.app connect client
 	mkdir -p mac_apps
 	cp -R mac_app_structure/GChatClient.app mac_apps
 	cp connect client save.txt mac_apps/GChatClient.app/Contents/MacOS
 
-mac-server: all
+mac-server: mac_app_structure/GChatServer.app server
 	mkdir -p mac_apps
 	cp -R mac_app_structure/GChatServer.app mac_apps
 	cp server mac_apps/GChatServer.app/Contents/MacOS
