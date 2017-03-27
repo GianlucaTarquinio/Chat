@@ -1,5 +1,7 @@
 all: server client connect
 
+mac-apps: mac-client mac-server
+
 server: server.o chat.o pqueue.o
 	gcc server.o chat.o pqueue.o -o server -lpthread
 
@@ -33,8 +35,6 @@ mac-server: mac_app_structure/GChatServer.app server
 	mkdir -p mac_apps
 	cp -R mac_app_structure/GChatServer.app mac_apps
 	cp server mac_apps/GChatServer.app/Contents/MacOS
-
-mac-apps: mac-client mac-server
 
 clean:
 	rm -rf *.o server client connect
