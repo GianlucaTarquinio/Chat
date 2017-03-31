@@ -11,8 +11,6 @@
 #include "chat.h"
 #include "pqueue.h"
 
-#define NUM_CMDS 9
-
 typedef struct connectionData {
 	int connection;
 	pthread_mutex_t lock;
@@ -29,25 +27,25 @@ typedef struct command {
 	int (*execCMD)(char *);
 } Command;
 
-int socket_desc;
+int socket_desc, cmdLen;
 ConnectionData connections[MAX_CONNECTIONS];
 PQueue *messages;
-Command commands[NUM_CMDS];
+Command *commands;
 pthread_mutex_t queueLock;
 pthread_cond_t toSend;
 
 int messageCompare(const void *a, const void *b) {
 	Message *m1 = (Message *) a;
 	Message *m2 = (Message *) b;
-	if(m1->date.tv_sec < m2->date.tv_usec) {
-		return 1;
-	} else if(m1->date.tv_sec > m2->date.tv_sec) {
+	if(m1->date.tv_sec < m2->date.tv_sec) {
 		return -1;
+	} else if(m1->date.tv_sec > m2->date.tv_sec) {
+		return 1;
 	}
 	if(m1->date.tv_usec < m2->date.tv_usec) {
-		return 1;
-	} else if(m1->date.tv_usec > m2->date.tv_usec) {
 		return -1;
+	} else if(m1->date.tv_usec > m2->date.tv_usec) {
+		return 1;
 	}
 	return 0;
 }
@@ -248,7 +246,7 @@ int cmdList(char *args) {
 int cmdHelp(char *args) {
 	int i;
 	printf("\n" BOLD "Available commands:" NORMAL "\n");
-	for(i = 0; i < NUM_CMDS; i++) {
+	for(i = 0; i < cmdLen; i++) {
 		printf(BOLD "%s %s" NORMAL "  %s\n", commands[i].name, commands[i].usage, commands[i].desc);
 	}
 	printf("\n");
@@ -260,7 +258,7 @@ int cmdHelp(char *args) {
 //////////////////////////////////////////////////
 
 int parseCommand(char *command) {
-	int l = 0, r = NUM_CMDS - 1, m, i = 0, cmp, result;
+	int l = 0, r = cmdLen - 1, m, i = 0, cmp, result;
 	char *current = command, c;
 	i = 0;
 	while(i < CMD_LEN && (c = *current) != '\0' && c != '\n' && c != ' ') {
@@ -292,48 +290,65 @@ int parseCommand(char *command) {
 	return -2;
 }
 
-void addCommand(char *name, int (*execCMD)(char *), char *usage, char *desc) {
-	static int cmdCount = 0;
-	if(cmdCount < NUM_CMDS) {
-		strncpy(commands[cmdCount].name, name, CMD_LEN);
-		commands[cmdCount].name[CMD_LEN] = '\0';
-		if(usage) {
-			strncpy(commands[cmdCount].usage, usage, CMD_USAGE_LEN);
-			commands[cmdCount].usage[CMD_USAGE_LEN] = '\0';
-		} else {
-			commands[cmdCount].usage[0] = '\0';
-		}
-		if(desc) {
-			strncpy(commands[cmdCount].desc, desc, CMD_DESC_LEN);
-		} else {
-			strncpy(commands[cmdCount].desc, "No description available.", CMD_DESC_LEN);
-		}
-		commands[cmdCount].desc[CMD_DESC_LEN] = '\0';
-		commands[cmdCount].execCMD = execCMD;
-		cmdCount++;
-	}
-}
-
 int compareCommands(const void *a, const void *b) {
 	return strncmp(((Command *) a)->name, ((Command *) b)->name, CMD_LEN);
 }
 
-void sortCommands() {
-	qsort(&commands, NUM_CMDS, sizeof(Command), compareCommands);
+void addCommand(char *name, int (*execCMD)(char *), char *usage, char *desc, PQueue **cmds, int *count) {
+	Command *cmd = (Command *) malloc(sizeof(Command));
+	if(!cmd) {
+		printf("Error: command initialization failed.\n");
+		exit(1);
+	}
+	strncpy(cmd->name, name, CMD_LEN);
+	cmd->name[CMD_LEN] = '\0';
+	if(usage) {
+		strncpy(cmd->usage, usage, CMD_USAGE_LEN);
+		cmd->usage[CMD_USAGE_LEN] = '\0';
+	} else {
+		cmd->usage[0] = '\0';
+	}
+	if(desc) {
+		strncpy(cmd->desc, desc, CMD_DESC_LEN);
+	} else {
+		strncpy(cmd->desc, "No description available.", CMD_DESC_LEN);
+	}
+	cmd->desc[CMD_DESC_LEN] = '\0';
+	cmd->execCMD = execCMD;
+	if(pqPush(cmds, cmd, compareCommands, NULL)) {
+		printf("Error: command initialization failed.\n");
+		exit(1);
+	}
+	(*count)++;
+}
+
+void endCommands(PQueue **cmds, int count) {
+	int i = 0;
+	Command *cmd;
+	cmdLen = count;
+	commands = (Command *) malloc(cmdLen * sizeof(Command));
+	while((cmd = (Command *) pqPop(cmds, NULL))) {
+		commands[i++] = *cmd;
+		free(cmd);
+	}
+	freeQueue(cmds, NULL);
 }
 
 void initCommands() {
-	addCommand("hardexit", cmdHardexit, NULL, "Forcefully severs all connections and shuts down the server.");
-	addCommand("say", cmdSay, "<message>", "Prints a message to all clients connected to the server.");
-	addCommand("hardkickall", cmdHardkickall, NULL, "Forcefull severs all connections.");
-	addCommand("list", cmdList, "[name]", "Lists the name and number of all connections. If a name is specified, only connections with that name will be listed.");
-	addCommand("hardkick", cmdHardkick, "<name | number>", "Forcefully severs the connection with a certain name or number.");
-	addCommand("kick", cmdKick, "<name | number> [reason]", "Disconnects the client connected with a certain name or number. A reason for the kick can be specified.");
-	addCommand("kickall", cmdKickall, "[reason]", "Disconnects all clients connected to the server. A reason for the kick can be specified.");
-	addCommand("exit", cmdExit, NULL, "Disconnects all clients and shuts down the server.");
-	addCommand("help", cmdHelp, NULL, "Lists all commands, their usages, and their descriptions.");
-		
-	sortCommands();
+	PQueue *cmds = NULL;
+	int count = 0;
+
+	addCommand("hardexit", cmdHardexit, NULL, "Forcefully severs all connections and shuts down the server.", &cmds, &count);
+	addCommand("say", cmdSay, "<message>", "Prints a message to all clients connected to the server.", &cmds, &count);
+	addCommand("hardkickall", cmdHardkickall, NULL, "Forcefull severs all connections.", &cmds, &count);
+	addCommand("list", cmdList, "[name]", "Lists the name and number of all connections. If a name is specified, only connections with that name will be listed.", &cmds, &count);
+	addCommand("hardkick", cmdHardkick, "<name | number>", "Forcefully severs the connection with a certain name or number.", &cmds, &count);
+	addCommand("kick", cmdKick, "<name | number> [reason]", "Disconnects the client connected with a certain name or number. A reason for the kick can be specified.", &cmds, &count);
+	addCommand("kickall", cmdKickall, "[reason]", "Disconnects all clients connected to the server. A reason for the kick can be specified.", &cmds, &count);
+	addCommand("exit", cmdExit, NULL, "Disconnects all clients and shuts down the server.", &cmds, &count);
+	addCommand("help", cmdHelp, NULL, "Lists all commands, their usages, and their descriptions.", &cmds, &count);
+
+	endCommands(&cmds, count);
 }
 
 void *getInput(void *param) {
@@ -536,6 +551,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	initCommands();
+	messages = NULL;
 	
 	pthread_t sendThread;
 	if(pthread_create(&sendThread, NULL, sendMessages, NULL)) {

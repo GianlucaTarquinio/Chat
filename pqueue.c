@@ -18,14 +18,16 @@ int pqPush(PQueue **queue, void *data, int (*compare)(const void*, const void*),
 		return 0;
 	}
 	PQueue *current = NULL;
-	while(next && compare(data, next->data) <= 0) {
+	while(next && compare(data, next->data) >= 0) {
 		current = next;
 		next = next->next;
 	}
+	node->next = next;
 	if(current) {
 		current->next = node;
+	} else {
+		*queue = node;
 	}
-	node->next = next;
 	if(lock) pthread_mutex_unlock(lock);
 	return 0;
 }
