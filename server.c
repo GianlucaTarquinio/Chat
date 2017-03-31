@@ -221,15 +221,27 @@ int cmdKick(char *args) {
 
 int cmdList(char *args) {
 	uint32_t i;
+	int found = 0;
+	printf("\n");
+	if(!args) {
+		printf(BOLD "All connected clients:" NORMAL "\n");
+	} else {
+		printf(BOLD "Connected clients named '%.*s':" NORMAL "\n", NAME_LEN, args);
+	}
 	for(i = 0; i < MAX_CONNECTIONS; i++) {
 		pthread_mutex_lock(&(connections[i].lock));
 		if(connections[i].valid) {
 			if(!args || strncmp(args, connections[i].name, NAME_LEN) == 0) {
-				printf("%ld: %s\n", (long) connections[i].i, connections[i].name);
+				found = 1;
+				printf(BOLD "%ld:" NORMAL " %s\n", (long) connections[i].i, connections[i].name);
 			}
 		}
 		pthread_mutex_unlock(&(connections[i].lock));
 	}
+	if(!found) {
+		printf("None\n");
+	}
+	printf("\n");
 	return 0;
 }
 
