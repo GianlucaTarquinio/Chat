@@ -9,7 +9,7 @@ client: client.o chat.o
 	gcc client.o chat.o -o client -lpthread
 	
 connect: connect.o chat.o
-	gcc connect.o chat.o -o connect
+	gcc connect.o chat.o -o connect -lreadline
 	
 connect.o: connect.c chat.h
 	gcc -c connect.c
