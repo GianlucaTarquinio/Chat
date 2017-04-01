@@ -29,7 +29,7 @@ pqueue.o: pqueue.c pqueue.h
 mac-client: mac_app_structure/GChatClient.app connect client
 	mkdir -p mac_apps
 	cp -R mac_app_structure/GChatClient.app mac_apps
-	cp connect client save.txt mac_apps/GChatClient.app/Contents/MacOS
+	cp connect client save mac_apps/GChatClient.app/Contents/MacOS
 
 mac-server: mac_app_structure/GChatServer.app server
 	mkdir -p mac_apps
