@@ -240,17 +240,18 @@ int main(int argc, char *argv[]) {
 	}
 
 	while(1) {
-		printf("\n" BOLD "1:" NORMAL " Join Server\n");
-		printf(BOLD "2:" NORMAL " Add Server\n");
-		printf(BOLD "3:" NORMAL " Remove Server\n");
-		printf(BOLD "q:" NORMAL " Quit\n");
-		input = readline("\n" BOLD "Enter the option you want: " NORMAL);
+		printf("\n" BOLD "J:" NORMAL " Join Server\n");
+		printf(BOLD "A:" NORMAL " Add Server\n");
+		printf(BOLD "R:" NORMAL " Remove Server\n");
+		printf(BOLD "Q:" NORMAL " Quit\n");
+		input = readline("\n" BOLD "Enter the option you want (j/a/r/q): " NORMAL);
 		if(!input) {
 			printf("Error: couldn't read input.\n");
 			return 1;
 		}
 		switch(input[0]) {
-			case '1':
+			case 'J':
+			case 'j':
 			choice = getOption(data, count, BOLD "Enter the number of the server you want to connect to: " NORMAL);
 			if(choice == 0) {
 				printf("Invalid option\n");
@@ -270,7 +271,8 @@ int main(int argc, char *argv[]) {
 			return 0;
 			break;
 
-			case '2':
+			case 'A':
+			case 'a':
 			name = readline(BOLD "Enter a name for the server: " NORMAL);
 			if(!name) {
 				printf("Couldn't read name\n");
@@ -295,23 +297,36 @@ int main(int argc, char *argv[]) {
 			name = NULL;
 			break;
 
-			case '3': //make a new file and rename() it
+			case 'R':
+			case 'r':
 			choice = getOption(data, count, BOLD "Enter the number of the server you want to remove: " NORMAL);
 			if(choice == 0) {
 				printf("Invalid option\n");
 				break;
 			}
-			if(!removeFromSave(choice-1, path)) {
+			choice--;
+			addr = (char *) malloc(44 + strlen(data[choice]->name) + strlen(data[choice]->addr)); //Yes, I know this isn't an address, but I don't want to make another variable
+			sprintf(addr, "Are you sure you want to remove %s (%s)? (y/n) ", data[choice]->name, data[choice]->addr);
+			name = readline(addr); //Still don't want to make more variables :^)
+			free(addr);
+			if(!name) {
+				break;
+			}
+			if((*name == 'y' || *name == 'Y') && !removeFromSave(choice, path)) {
+				free(name);
 				freeData(&data, count);
 				count = loadSaveData(&data, path);
 				if(count < 0) {
 					printf("Error: counldn't load saved servers.\n");
 					return 1;
 				}
+			} else {
+				free(name);
 			}
 			break;
 
-			case 'q' :
+			case 'Q':
+			case 'q':
 			exit(0);
 			break;
 
