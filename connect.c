@@ -32,6 +32,72 @@ int addToSave(char *name, char *addr, char *path) {
 	return 0;
 }
 
+int removeFromSave(int lineIndex, char *path) {
+	char *line = NULL, *saveName = "save";
+	size_t linecap = 0, written;
+	ssize_t len;
+	int i = 0, pathLen = strlen(path), nameLen = strlen(saveName);
+	char *savePath = (char *) malloc(pathLen + nameLen + 1);
+	char *newPath = (char *) malloc(pathLen + nameLen + 2);
+	if(!savePath) {
+		printf("Error: malloc failed.\n");
+		return 1;
+	}
+	strcpy(savePath, path);
+	strcpy(savePath + pathLen, saveName);
+	strcpy(newPath, savePath);
+	strcpy(newPath + pathLen + nameLen, "~");
+	FILE *old = fopen(savePath, "r");
+	if(!old) {
+		free(savePath);
+		free(newPath);
+		printf("Error: save file not found.\n");
+		return 1;
+	}
+	FILE *new = fopen(newPath, "w");
+	if(!new) {
+		free(savePath);
+		free(newPath);
+		fclose(old);
+		printf("Error: couldn't update save file.\n");
+		return 1;
+	}
+	while((len = getline(&line, &linecap, old)) > 0 ) {
+		if(*line == ' ') {
+			if(i != lineIndex) {
+				written = fwrite(line, 1, len, new);
+				if(written != len) {
+					if(line) {
+						free(line);
+						line = NULL;
+					}
+					fclose(old);
+					fclose(new);
+					unlink(newPath);
+					free(savePath);
+					free(newPath);
+					printf("Error: couldn't update save file.\n");
+					return 1;
+				}
+			}
+			i++;
+		}
+	}
+	if(line) {
+		free(line);
+	}
+	fclose(old);
+	fclose(new);
+	i = rename(newPath, savePath);
+	free(savePath);
+	free(newPath);
+	if(i) {
+		printf("Error: couldn't update save file.\n");
+		return 1;
+	}
+	return 0;
+}
+
 int loadSaveData(SaveData ***data, char *path) {
 	char *line = NULL, *saveName = "save";
 	size_t linecap = 0;
@@ -46,11 +112,15 @@ int loadSaveData(SaveData ***data, char *path) {
 	strcpy(savePath, path);
 	strcpy(savePath + pathLen, saveName);
 	FILE *f = fopen(savePath, "r");
-	free(savePath);
 	if(!f) {
-		printf("Error: save file not found.\n");
-		return -1;
+		f = fopen(savePath, "w");
+		if(!f) {
+			free(savePath);
+			printf("Error: couldn't crete save file.\n");
+			return -1;
+		}
 	}
+	free(savePath);
 	while(getline(&line, &linecap, f) > 0) {
 		if(*line == ' ') {
 			count++;
@@ -104,32 +174,28 @@ int loadSaveData(SaveData ***data, char *path) {
 }
 
 char *getName() {
-	char *line = NULL, *ret;
-	size_t linecap = 0;
-	ssize_t len;
-	while (getchar() != '\n');
-	printf(BOLD "Name: " NORMAL);
-	len = getline(&line, &linecap, stdin);
-	if(len > 1) {
-		line[len - 1] = '\0';
-		ret = (char *) malloc(len);
-		strncpy(ret, line, len);
-		free(line);
-		return ret;
-	} else {
-		free(line);
+	char *line;
+	line = readline(BOLD "Name: " NORMAL);
+	if(!line) {
 		return NULL;
 	}
+	return line;
 }
 
-int getOption(SaveData **data, int count) {
+int getOption(SaveData **data, int count, char *prompt) {
 	int i;
+	char *line;
 	printf(BOLD "\nServers:" NORMAL "\n");
 	for(i = 0; i < count; i++) {
 		printf(BOLD "%d: " NORMAL "%s\n", i + 1, data[i]->name);
 	}
-	printf(BOLD "\nEnter the number of the server you want to connect to: " NORMAL);
-	scanf("%d", &i);
+	printf("\n");
+	line = readline(prompt);
+	if(!line) {
+		return 0;
+	}
+	i = atoi(line);
+	free(line);
 	if(i < 1 || i > count) {
 		return 0;
 	} else {
@@ -185,7 +251,7 @@ int main(int argc, char *argv[]) {
 		}
 		switch(input[0]) {
 			case '1':
-			choice = getOption(data, count);
+			choice = getOption(data, count, BOLD "Enter the number of the server you want to connect to: " NORMAL);
 			if(choice == 0) {
 				printf("Invalid option\n");
 				break;
@@ -219,7 +285,7 @@ int main(int argc, char *argv[]) {
 				freeData(&data, count);
 				count = loadSaveData(&data, path);
 				if(count < 0) {
-					printf("Error: couldn't load saves servers.\n");
+					printf("Error: couldn't load saved servers.\n");
 					return 1;
 				}
 			}
@@ -229,8 +295,20 @@ int main(int argc, char *argv[]) {
 			name = NULL;
 			break;
 
-			case '3':
-			printf("3\n");
+			case '3': //make a new file and rename() it
+			choice = getOption(data, count, BOLD "Enter the number of the server you want to remove: " NORMAL);
+			if(choice == 0) {
+				printf("Invalid option\n");
+				break;
+			}
+			if(!removeFromSave(choice-1, path)) {
+				freeData(&data, count);
+				count = loadSaveData(&data, path);
+				if(count < 0) {
+					printf("Error: counldn't load saved servers.\n");
+					return 1;
+				}
+			}
 			break;
 
 			case 'q' :
