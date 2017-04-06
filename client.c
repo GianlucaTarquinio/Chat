@@ -174,13 +174,13 @@ int main(int argc, char* argv[]) {
 					break;
 					
 					case MSG_EXIT:
+					close(socket_desc);
 					printf(BOLD "Kicked from server." NORMAL);
 					if(strncmp("", incMessage.content, MSG_LEN) == 0) {
 						printf("\n");
 					} else {
 						printf(" (Reason: %s)\n", incMessage.content);
 					}
-					close(socket_desc);
 					exit(0);
 					break;
 					
