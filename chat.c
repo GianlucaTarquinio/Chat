@@ -85,5 +85,6 @@ int cleanPrint(const char *restrict format, ...) {
 	retval = vsprintf(buf, format, args);
 	va_end(args);
 	printf("%s", buf); //rather than printf, this will call a function that does the readline magic
+	//free buf?
 	return retval;
 }
